@@ -42,7 +42,7 @@ jobs:
             - name: Package (backend + frontend + electron-builder)
               run: task package
             - name: Upload installer artifact
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   name: quasar-windows
                   path: make/*
