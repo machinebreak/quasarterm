@@ -19,7 +19,13 @@ describe("stripBlackBackgroundEscapes", () => {
         expect(stripBlackBackgroundEscapes("\u001b[48;5;16mx")).toBe("\u001b[49mx");
     });
 
-    it("keeps non-black 256-color backgrounds", () => {
+    it("rewrites the 256-color near-black grays (232-234)", () => {
+        expect(stripBlackBackgroundEscapes("\u001b[48;5;232mx")).toBe("\u001b[49mx");
+        expect(stripBlackBackgroundEscapes("\u001b[48;5;233mx")).toBe("\u001b[49mx");
+        expect(stripBlackBackgroundEscapes("\u001b[48;5;234mx")).toBe("\u001b[49mx");
+    });
+
+    it("keeps darker-but-intentional 256-color backgrounds", () => {
         expect(stripBlackBackgroundEscapes("\u001b[48;5;235mx")).toBe("\u001b[48;5;235mx");
         expect(stripBlackBackgroundEscapes("\u001b[48;5;236mx")).toBe("\u001b[48;5;236mx");
     });
@@ -30,8 +36,16 @@ describe("stripBlackBackgroundEscapes", () => {
         expect(stripBlackBackgroundEscapes("\u001b[37;48;2;0;0;0mtext")).toBe("\u001b[37mtext");
     });
 
-    it("keeps non-black truecolor backgrounds", () => {
-        expect(stripBlackBackgroundEscapes("\u001b[48;2;30;30;30mx")).toBe("\u001b[48;2;30;30;30mx");
+    it("rewrites dark-gray truecolor backgrounds (up to the neutral threshold)", () => {
+        expect(stripBlackBackgroundEscapes("\u001b[48;2;3;2;1mx")).toBe("\u001b[49mx");
+        expect(stripBlackBackgroundEscapes("\u001b[48;2;18;18;18mx")).toBe("\u001b[49mx");
+        expect(stripBlackBackgroundEscapes("\u001b[48;2;30;30;30mx")).toBe("\u001b[49mx");
+    });
+
+    it("keeps intentional panel grays and colored backgrounds", () => {
+        expect(stripBlackBackgroundEscapes("\u001b[48;2;41;41;41mx")).toBe("\u001b[48;2;41;41;41mx");
+        expect(stripBlackBackgroundEscapes("\u001b[48;2;64;64;64mx")).toBe("\u001b[48;2;64;64;64mx");
+        expect(stripBlackBackgroundEscapes("\u001b[48;2;74;34;29mx")).toBe("\u001b[48;2;74;34;29mx");
         expect(stripBlackBackgroundEscapes("\u001b[48;2;0;0;255mx")).toBe("\u001b[48;2;0;0;255mx");
     });
 

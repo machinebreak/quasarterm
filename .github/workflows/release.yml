@@ -55,7 +55,7 @@ jobs:
                   files: make/*
                   generate_release_notes: false
                   body: |
-                      ## Quasar ${{ github.ref_name }} — first packaged release 🎉
+                      ## Quasar ${{ github.ref_name }} — packaged release 🎉
 
                       **Downloads (Windows x64):** NSIS installer (`.exe`), MSI package and a portable `.zip`.
 

@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/machinebreak/quasarterm/releases"><img src="https://img.shields.io/badge/release-v0.1.0-blue?style=flat-square" alt="v0.1.0"></a>
+  <a href="https://github.com/machinebreak/quasarterm/releases"><img src="https://img.shields.io/badge/release-v0.1.1-blue?style=flat-square" alt="v0.1.1"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square" alt="Apache-2.0"></a>
   <a href="https://github.com/machinebreak/quasarterm/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/machinebreak/quasarterm/release.yml?style=flat-square&label=build" alt="Release build"></a>
   <img src="https://img.shields.io/badge/platform-Windows-0078D6?style=flat-square" alt="Windows">
@@ -74,7 +74,7 @@
 
 ## Installation
 
-> **Status:** v0.1.0 — early days. Windows first; macOS and Linux build from the same codebase and are planned next.
+> **Status:** v0.1.1 — early days. Windows first; macOS and Linux build from the same codebase and are planned next.
 
 **Download** the installer from [**Releases**](https://github.com/machinebreak/quasarterm/releases). The installer is not code-signed yet, so Windows SmartScreen may ask you to confirm.
 

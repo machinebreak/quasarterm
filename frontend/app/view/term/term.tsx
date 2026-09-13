@@ -315,7 +315,10 @@ const TerminalView = ({ blockId, model }: ViewComponentProps<TermViewModel>) => 
             },
             {
                 keydownHandler: model.handleTerminalKeydown.bind(model),
-                useWebGl: !termSettings?.["term:disablewebgl"],
+                // WebGL renders painted backgrounds opaquely; with a transparent
+                // theme those show as dark slabs over the blended background.
+                // Use the DOM renderer whenever transparency is enabled.
+                useWebGl: !termSettings?.["term:disablewebgl"] && termTransparency <= 0,
                 sendDataHandler: model.sendDataToController.bind(model),
                 nodeModel: model.nodeModel,
             }

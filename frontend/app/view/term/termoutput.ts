@@ -1,20 +1,26 @@
 // Copyright 2026, Quasar
 // SPDX-License-Identifier: Apache-2.0
 
-// Terminal output sanitizing: rewrites "black background" SGR parameters
-// (ESC[40m, ESC[48;5;0m, ESC[48;5;16m, ESC[48;2;0;0;0m, ...) to the default
-// background. CLIs (Codex, Claude, ...) use those to paint highlights; on a
-// translucent/semi-dark theme they render as opaque pure-black slabs. Using
-// the default background instead makes them blend in like regular text,
-// without changing the terminal background color.
+// Terminal output sanitizing: rewrites dark "black background" SGR parameters
+// (ESC[40m, ESC[48;5;0m, ESC[48;5;232m, ESC[48;2;0;0;0m, ...) to the default
+// background. CLIs (Codex, Claude, ...) use those to paint highlights, panels
+// and rules; on a translucent/semi-dark theme they render as opaque dark slabs
+// because explicit backgrounds ignore the theme's transparency. Using the
+// default background instead makes them blend in like regular text, without
+// changing the terminal background color.
 
 const SgrRegex = /\u001b\[([0-9;]*)m/g; // eslint-disable-line no-control-regex
-// RGB channels at or below this are treated as "black".
-const MaxBlackRgbChannel = 5;
+// RGB channels at or below this are treated as "black"-ish. CLIs paint panels,
+// rules and hint rows with near-black backgrounds; over a transparent theme
+// every one of those renders as an opaque slab, so the whole dark range is
+// rewritten to the default background. 0x20 leaves intentional lighter panel
+// fills (e.g. #292929 composer rows) untouched.
+const MaxBlackRgbChannel = 0x20;
 
 function isBlackBg256(raw: string): boolean {
     const n = raw === "" ? 0 : parseInt(raw, 10);
-    return n === 0 || n === 16;
+    // 0/16 = black; 232-234 = the near-black grays (#080808..#1c1c1c)
+    return n === 0 || n === 16 || (n >= 232 && n <= 234);
 }
 
 function isBlackRgb(rRaw: string, gRaw: string, bRaw: string): boolean {

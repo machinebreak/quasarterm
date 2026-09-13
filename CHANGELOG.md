@@ -3,6 +3,13 @@
 All notable changes to Quasar are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
+## [0.1.1] - 2026-09-13
+
+### Fixed
+
+- Dark backgrounds painted by AI CLIs (near-black panels, separators and hint rows) no longer render as opaque slabs over transparent themes — the neutralization range at the terminal write path now covers the whole near-black family (truecolor `≤ #202020`, 256-color grays 232-234), while intentional panel fills like the `#292929` composer stay untouched.
+- Terminals with transparency now use the DOM renderer instead of WebGL: the WebGL renderer composites painted backgrounds opaquely, which showed as dark boxes over the blended transparent background.
+
 ## [0.1.0] - 2026-09-13
 
 First public release 🎉
