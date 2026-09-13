@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/machinebreak/quasarterm/releases"><img src="https://img.shields.io/badge/release-v0.1.2-blue?style=flat-square" alt="v0.1.2"></a>
+  <a href="https://github.com/machinebreak/quasarterm/releases"><img src="https://img.shields.io/badge/release-v0.1.3-blue?style=flat-square" alt="v0.1.3"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square" alt="Apache-2.0"></a>
   <a href="https://github.com/machinebreak/quasarterm/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/machinebreak/quasarterm/release.yml?style=flat-square&label=build" alt="Release build"></a>
   <img src="https://img.shields.io/badge/platform-Windows-0078D6?style=flat-square" alt="Windows">
@@ -67,14 +67,20 @@
 - Free-form windows over a live desktop: terminal, browser, files, panels
 - Saved layouts and backgrounds
 
+### 🔄 Stays up to date
+
+- Built-in **auto-updater** backed by GitHub Releases: new versions download quietly in the background
+- An **Update** button appears in the tab bar when a version is ready — one click restarts and installs it
+- Missed the button? The update still applies automatically on the next quit
+
 ### 🔒 Private by default
 
-- No telemetry, no cloud services, no update pings — nothing leaves your machine
+- No telemetry, no cloud services — nothing leaves your machine except the automatic update check against GitHub Releases (disable it with the `autoupdate:enabled` setting)
 - Everything is stored locally (SQLite)
 
 ## Installation
 
-> **Status:** v0.1.2 — early days. Windows first; macOS and Linux build from the same codebase and are planned next.
+> **Status:** v0.1.3 — early days. Windows first; macOS and Linux build from the same codebase and are planned next.
 
 **Download** the installer from [**Releases**](https://github.com/machinebreak/quasarterm/releases). The installer is not code-signed yet, so Windows SmartScreen may ask you to confirm.
 

@@ -14,6 +14,16 @@ const config = {
     productName: pkg.productName,
     executableName: pkg.productName,
     asar: false,
+    // Update source for the auto-updater (app-update.yml + latest.yml). Pinned
+    // explicitly so builds from any clone/remote always point at the official
+    // release feed; `-p never` keeps electron-builder from publishing itself.
+    publish: [
+        {
+            provider: "github",
+            owner: "machinebreak",
+            repo: "quasarterm",
+        },
+    ],
     artifactName: "${productName}-${platform}-${arch}-${version}.${ext}",
     npmRebuild: false,
     nodeGypRebuild: false,

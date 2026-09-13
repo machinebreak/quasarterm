@@ -3,6 +3,12 @@
 All notable changes to Quasar are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
+## [0.1.3] - 2026-09-13
+
+### Added
+
+- **Auto-updates**: Quasar now checks GitHub Releases for new versions (enabled by default, hourly, all tunable via the `autoupdate:*` settings). When a version is out it downloads in the background and an **Update** button appears in the tab bar — one click restarts and installs it. If you don't click, the update still applies automatically on the next quit. Releases are verified against the `latest.yml` metadata published with each release.
+
 ## [0.1.2] - 2026-09-13
 
 ### Fixed
