@@ -280,7 +280,7 @@ const QuickTips = () => {
                         </IconBox>
                         <a
                             target="_blank"
-                            href="https://github.com/machinebreak/orion-term"
+                            href="https://github.com/machinebreak/quasarterm"
                             rel="noopener"
                             className="hover:text-accent-400 hover:underline transition-colors font-medium"
                         >
@@ -293,7 +293,7 @@ const QuickTips = () => {
                         </IconBox>
                         <a
                             target="_blank"
-                            href="https://github.com/machinebreak/orion-term/issues"
+                            href="https://github.com/machinebreak/quasarterm/issues"
                             rel="noopener"
                             className="hover:text-accent-400 hover:underline transition-colors font-medium"
                         >

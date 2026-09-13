@@ -44,7 +44,7 @@ task package
 
 ## Bugs & requests
 
-Open an issue at [github.com/machinebreak/orion-term/issues](https://github.com/machinebreak/orion-term/issues).
+Open an issue at [github.com/machinebreak/quasarterm/issues](https://github.com/machinebreak/quasarterm/issues).
 
 ## License
 
