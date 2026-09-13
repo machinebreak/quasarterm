@@ -42,6 +42,10 @@ Package a production build for the current platform:
 task package
 ```
 
+## Bugs & requests
+
+Open an issue at [github.com/machinebreak/orion-term/issues](https://github.com/machinebreak/orion-term/issues).
+
 ## License
 
 Apache-2.0. Wave Terminal copyright notices are preserved in `LICENSE` and `NOTICE`.
