@@ -26,9 +26,6 @@
         "app:confirmquit": {
           "type": "boolean"
         },
-        "app:hideaibutton": {
-          "type": "boolean"
-        },
         "app:disablectrlshiftarrows": {
           "type": "boolean"
         },
@@ -50,56 +47,64 @@
             "left"
           ]
         },
+        "app:recentprojects": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "app:canvasmode": {
+          "type": "boolean"
+        },
+        "app:canvasbg": {
+          "type": "string",
+          "enum": [
+            "default",
+            "grid",
+            "peaks",
+            "lofi",
+            "aurora",
+            "custom"
+          ]
+        },
+        "app:canvasbgimage": {
+          "type": "string",
+          "description": "Path to an imported background image or GIF (used when app:canvasbg is custom)"
+        },
+        "app:canvasbgdim": {
+          "type": "number",
+          "description": "Dim overlay over the canvas background (0.0 = none, 1.0 = fully dark)"
+        },
+        "accounts:quotaalert": {
+          "type": "boolean",
+          "description": "Desktop notification when an account quota drops below the alert threshold"
+        },
+        "accounts:quotaalertthreshold": {
+          "type": "number",
+          "description": "Remaining quota percent that triggers a low-quota notification (default 15)"
+        },
+        "accounts:refreshinterval": {
+          "type": "integer",
+          "description": "Minutes between background quota refreshes (0 disables the background monitor, minimum 2)"
+        },
+        "accounts:codexapi": {
+          "type": "boolean",
+          "description": "Serve a local OpenAI-compatible endpoint backed by the managed Codex accounts"
+        },
+        "accounts:codexapiport": {
+          "type": "integer",
+          "description": "Port for the local Codex API endpoint (default 8318)"
+        },
+        "accounts:codexapikey": {
+          "type": "string",
+          "description": "Optional bearer token required by the local Codex API endpoint"
+        },
+        "app:tray": {
+          "type": "boolean",
+          "description": "Show a system tray icon with provider quota status"
+        },
         "feature:waveappbuilder": {
           "type": "boolean"
-        },
-        "ai:*": {
-          "type": "boolean"
-        },
-        "ai:preset": {
-          "type": "string"
-        },
-        "ai:apitype": {
-          "type": "string"
-        },
-        "ai:baseurl": {
-          "type": "string"
-        },
-        "ai:apitoken": {
-          "type": "string"
-        },
-        "ai:name": {
-          "type": "string"
-        },
-        "ai:model": {
-          "type": "string"
-        },
-        "ai:orgid": {
-          "type": "string"
-        },
-        "ai:apiversion": {
-          "type": "string"
-        },
-        "ai:maxtokens": {
-          "type": "number"
-        },
-        "ai:timeoutms": {
-          "type": "number"
-        },
-        "ai:proxyurl": {
-          "type": "string"
-        },
-        "ai:fontsize": {
-          "type": "number"
-        },
-        "ai:fixedfontsize": {
-          "type": "number"
-        },
-        "waveai:showcloudmodes": {
-          "type": "boolean"
-        },
-        "waveai:defaultmode": {
-          "type": "string"
         },
         "term:*": {
           "type": "boolean"
@@ -136,6 +141,9 @@
         },
         "term:transparency": {
           "type": "number"
+        },
+        "term:agentalerts": {
+          "type": "boolean"
         },
         "term:allowbracketedpaste": {
           "type": "boolean"
