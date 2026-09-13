@@ -1,0 +1,416 @@
+// Copyright 2026, Quasar
+// SPDX-License-Identifier: Apache-2.0
+
+// Canvas ("Deska") mode styles: floating block windows + chill backgrounds.
+
+.canvas-layout {
+    position: relative;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background: var(--main-bg-color);
+}
+
+// ---- background ----
+
+.canvas-bg {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+
+    .canvas-scene {
+        position: absolute;
+        inset: 0;
+    }
+
+    .canvas-scene-svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+    }
+
+    .canvas-scene-grid {
+        background-image:
+            radial-gradient(circle at 50% 36%, rgb(255 255 255 / 5%), transparent 62%),
+            radial-gradient(rgb(255 255 255 / 9%) 1px, transparent 1.2px);
+        background-size:
+            100% 100%,
+            26px 26px;
+    }
+
+    .canvas-scene-default {
+        background-image: radial-gradient(circle at 50% 28%, rgb(255 255 255 / 4%), transparent 65%);
+    }
+
+    .canvas-scene-custom {
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+
+    .canvas-bg-dim {
+        position: absolute;
+        inset: 0;
+        background: rgb(0 0 0 / var(--canvas-dim, 0.3));
+    }
+}
+
+// ---- floating windows ----
+
+.canvas-windows {
+    position: absolute;
+    inset: 0;
+}
+
+// The project launcher welcome fills the whole canvas (no window frame).
+.canvas-welcome {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+}
+
+.canvas-window {
+    position: absolute;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgb(255 255 255 / 10%);
+    background: rgb(0 0 0 / 45%);
+    box-shadow:
+        0 18px 42px -14px rgb(0 0 0 / 65%),
+        0 4px 14px rgb(0 0 0 / 35%);
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
+
+    [data-role="block-header"] {
+        cursor: grab;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-user-drag: none;
+    }
+
+    &.canvas-window-focused {
+        border-color: rgb(255 255 255 / 26%);
+        box-shadow:
+            0 24px 60px -16px rgb(0 0 0 / 75%),
+            0 6px 18px rgb(0 0 0 / 40%);
+    }
+
+    &.canvas-window-maximized {
+        transition: none;
+    }
+
+    &.canvas-window-dragging,
+    &.canvas-window-resizing {
+        user-select: none;
+
+        [data-role="block-header"] {
+            cursor: grabbing;
+        }
+    }
+
+    // tile-magnify translucency doesn't apply to canvas windows
+    .block.magnified {
+        background-color: var(--block-bg-color);
+        backdrop-filter: none;
+    }
+}
+
+.canvas-resize-handle {
+    position: absolute;
+    z-index: 30;
+    touch-action: none;
+}
+
+.canvas-resize-n,
+.canvas-resize-s {
+    left: 10px;
+    right: 10px;
+    height: 8px;
+    cursor: ns-resize;
+}
+
+.canvas-resize-n {
+    top: 0;
+}
+
+.canvas-resize-s {
+    bottom: 0;
+}
+
+.canvas-resize-e,
+.canvas-resize-w {
+    top: 10px;
+    bottom: 10px;
+    width: 8px;
+    cursor: ew-resize;
+}
+
+.canvas-resize-e {
+    right: 0;
+}
+
+.canvas-resize-w {
+    left: 0;
+}
+
+.canvas-resize-ne,
+.canvas-resize-nw,
+.canvas-resize-se,
+.canvas-resize-sw {
+    width: 14px;
+    height: 14px;
+}
+
+.canvas-resize-ne {
+    top: 0;
+    right: 0;
+    cursor: nesw-resize;
+}
+
+.canvas-resize-nw {
+    top: 0;
+    left: 0;
+    cursor: nwse-resize;
+}
+
+.canvas-resize-se {
+    bottom: 0;
+    right: 0;
+    cursor: nwse-resize;
+}
+
+.canvas-resize-sw {
+    bottom: 0;
+    left: 0;
+    cursor: nesw-resize;
+}
+
+.canvas-ephemeral-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 25000;
+    background: rgb(0 0 0 / 50%);
+    backdrop-filter: blur(2px);
+}
+
+.canvas-window.canvas-window-ephemeral {
+    transition: none;
+    border-color: rgb(255 255 255 / 30%);
+    box-shadow: 0 30px 80px -20px rgb(0 0 0 / 85%);
+    animation: canvas-ephemeral-in 0.14s ease-out;
+
+    [data-role="block-header"] {
+        cursor: default;
+    }
+}
+
+@keyframes canvas-ephemeral-in {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+// ---- toolbar + hints ----
+
+.canvas-toolbar {
+    position: absolute;
+    left: 50%;
+    bottom: 14px;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px;
+    border-radius: 999px;
+    border: 1px solid rgb(255 255 255 / 12%);
+    background: rgb(18 18 24 / 74%);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 12px 32px -10px rgb(0 0 0 / 65%);
+    z-index: 20000;
+
+    .canvas-toolbar-btn {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 6px 14px;
+        border-radius: 999px;
+        font-size: 12.5px;
+        color: var(--main-text-color);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+
+        i {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        &:hover {
+            background: rgb(255 255 255 / 10%);
+        }
+
+        &:active {
+            background: rgb(255 255 255 / 16%);
+        }
+    }
+}
+
+.canvas-empty-hint {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 15%;
+    text-align: center;
+    pointer-events: none;
+    color: var(--secondary-text-color);
+    z-index: 5;
+
+    .canvas-empty-hint-title {
+        font-size: 17px;
+        font-weight: 600;
+        color: var(--main-text-color);
+        opacity: 0.9;
+    }
+
+    .canvas-empty-hint-sub {
+        font-size: 12.5px;
+        max-width: 480px;
+        line-height: 1.5;
+        opacity: 0.85;
+    }
+}
+
+// ---- background animations ----
+
+@keyframes canvas-twinkle {
+    0%,
+    100% {
+        opacity: 0.2;
+    }
+    50% {
+        opacity: 0.95;
+    }
+}
+
+@keyframes canvas-cloud-drift {
+    0% {
+        transform: translateX(-55px);
+    }
+    100% {
+        transform: translateX(65px);
+    }
+}
+
+@keyframes canvas-sun-breathe {
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.045);
+        opacity: 0.92;
+    }
+}
+
+@keyframes canvas-flicker {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    42% {
+        opacity: 0.55;
+    }
+    58% {
+        opacity: 0.9;
+    }
+}
+
+@keyframes canvas-aurora-sway {
+    0% {
+        transform: translate(-46px, 8px) scaleY(1);
+        opacity: 0.75;
+    }
+    50% {
+        transform: translate(34px, -12px) scaleY(1.14);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-46px, 8px) scaleY(1);
+        opacity: 0.75;
+    }
+}
+
+.lofi-twinkle {
+    animation: canvas-twinkle 5s ease-in-out infinite;
+}
+
+.lofi-cloud {
+    animation: canvas-cloud-drift 80s ease-in-out infinite alternate;
+    will-change: transform;
+}
+
+.lofi-cloud-1 {
+    animation-duration: 84s;
+}
+
+.lofi-cloud-2 {
+    animation-duration: 108s;
+    animation-delay: -34s;
+}
+
+.lofi-cloud-3 {
+    animation-duration: 68s;
+    animation-delay: -14s;
+}
+
+.lofi-sun,
+.lofi-sun-core {
+    transform-origin: 1090px 560px;
+    animation: canvas-sun-breathe 26s ease-in-out infinite;
+}
+
+.lofi-cabin circle {
+    animation: canvas-flicker 5.5s ease-in-out infinite;
+}
+
+.lofi-cabin circle:nth-child(2) {
+    animation-duration: 7.5s;
+    animation-delay: 1.4s;
+}
+
+.lofi-cabin circle:nth-child(3) {
+    animation-duration: 6.5s;
+    animation-delay: 2.8s;
+}
+
+.aurora-band {
+    mix-blend-mode: screen;
+    animation: canvas-aurora-sway 34s ease-in-out infinite;
+    will-change: transform, opacity;
+}
+
+.aurora-band-2 {
+    animation-duration: 46s;
+    animation-delay: -13s;
+}
+
+.aurora-band-3 {
+    animation-duration: 58s;
+    animation-delay: -27s;
+}
+
+.prefers-reduced-motion .canvas-bg * {
+    animation: none !important;
+}
