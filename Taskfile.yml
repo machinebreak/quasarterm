@@ -4,15 +4,13 @@
 version: "3"
 
 vars:
-    APP_NAME: "Wave"
+    APP_NAME: "Quasar"
     BIN_DIR: "bin"
+    CGO: "1"
     VERSION:
         sh: node version.cjs
     RMRF: '{{if eq OS "windows"}}powershell -NoProfile -NonInteractive Remove-Item -Force -Recurse -ErrorAction SilentlyContinue{{else}}rm -rf{{end}}'
     DATE: '{{if eq OS "windows"}}powershell -NoProfile -NonInteractive Get-Date -UFormat{{else}}date{{end}}'
-    ARTIFACTS_BUCKET: waveterm-github-artifacts/staging-w2
-    RELEASES_BUCKET: dl.waveterm.dev/releases-w2
-    WINGET_PACKAGE: CommandLine.Wave
 
 tasks:
     electron:dev:
@@ -26,9 +24,6 @@ tasks:
             - build:tsunamiscaffold
         env:
             WAVETERM_ENVFILE: "{{.ROOT_DIR}}/.env"
-            WCLOUD_PING_ENDPOINT: "https://ping-dev.waveterm.dev/central"
-            WCLOUD_ENDPOINT: "https://api-dev.waveterm.dev/central"
-            WCLOUD_WS_ENDPOINT: "wss://wsapi-dev.waveterm.dev"
             WAVETERM_NOCONFIRMQUIT: "1"
 
     electron:start:
@@ -41,9 +36,6 @@ tasks:
             - build:backend
         env:
             WAVETERM_ENVFILE: "{{.ROOT_DIR}}/.env"
-            WCLOUD_PING_ENDPOINT: "https://ping-dev.waveterm.dev/central"
-            WCLOUD_ENDPOINT: "https://api-dev.waveterm.dev/central"
-            WCLOUD_WS_ENDPOINT: "wss://wsapi-dev.waveterm.dev"
 
     electron:quickdev:
         desc: Run the Electron application via the Vite dev server (quick dev - no docsite, arm64 only, no generate, no wsh).
@@ -53,9 +45,6 @@ tasks:
             - build:backend:quickdev
         env:
             WAVETERM_ENVFILE: "{{.ROOT_DIR}}/.env"
-            WCLOUD_PING_ENDPOINT: "https://ping-dev.waveterm.dev/central"
-            WCLOUD_ENDPOINT: "https://api-dev.waveterm.dev/central"
-            WCLOUD_WS_ENDPOINT: "wss://wsapi-dev.waveterm.dev/"
             WAVETERM_NOCONFIRMQUIT: "1"
 
     preview:
@@ -80,46 +69,6 @@ tasks:
             - build:backend:quickdev:windows
         env:
             WAVETERM_ENVFILE: "{{.ROOT_DIR}}/.env"
-            WCLOUD_PING_ENDPOINT: "https://ping-dev.waveterm.dev/central"
-            WCLOUD_ENDPOINT: "https://api-dev.waveterm.dev/central"
-            WCLOUD_WS_ENDPOINT: "wss://wsapi-dev.waveterm.dev/"
-
-    docs:npm:install:
-        desc: Runs `npm install` in docs directory
-        internal: true
-        generates:
-            - docs/node_modules/**/*
-            - docs/package-lock.json
-        sources:
-            - docs/package-lock.json
-            - docs/package.json
-        cmd: npm install
-        dir: docs
-
-    docsite:start:
-        desc: Start the docsite dev server.
-        cmd: npm run start
-        dir: docs
-        aliases:
-            - docsite
-        deps:
-            - docs:npm:install
-
-    docsite:build:public:
-        desc: Build the full docsite.
-        cmds:
-            - cd docs && npm run build
-        env:
-            USE_SIMPLE_CSS_MINIFIER: "true"
-        sources:
-            - "docs/*"
-            - "docs/src/**/*"
-            - "docs/docs/**/*"
-            - "docs/static/**/*"
-        generates:
-            - "docs/build/**/*"
-        deps:
-            - docs:npm:install
 
     package:
         desc: Package the application for the current platform.
@@ -268,7 +217,7 @@ tasks:
             vars:
                 - ARCHS
         cmd:
-            cmd: CGO_ENABLED=1 GOARCH={{.GOARCH}} {{.GO_ENV_VARS}} go build -tags "osusergo,sqlite_omit_load_extension" -ldflags "{{.GO_LDFLAGS}} -X main.BuildTime=$({{.DATE}} +'%Y%m%d%H%M') -X main.WaveVersion={{.VERSION}}" -o dist/bin/wavesrv.{{if eq .GOARCH "amd64"}}x64{{else}}{{.GOARCH}}{{end}}{{exeExt}} cmd/server/main-server.go
+            cmd: CGO_ENABLED={{.CGO}} GOARCH={{.GOARCH}} {{.GO_ENV_VARS}} go build -tags "osusergo,sqlite_omit_load_extension" -ldflags "{{.GO_LDFLAGS}} -X main.BuildTime=$({{.DATE}} +'%Y%m%d%H%M') -X main.WaveVersion={{.VERSION}}" -o dist/bin/wavesrv.{{if eq .GOARCH "amd64"}}x64{{else}}{{.GOARCH}}{{end}}{{exeExt}} cmd/server/main-server.go
             for:
                 var: ARCHS
                 split: ","
@@ -380,61 +329,6 @@ tasks:
     version:
         desc: Get the current package version, or bump version if args are present. To pass args to `version.cjs`, add them after `--`. See `version.cjs` for usage definitions for the arguments.
         cmd: node version.cjs {{.CLI_ARGS}}
-
-    artifacts:upload:
-        desc: Uploads build artifacts to the staging bucket in S3. To add additional AWS CLI arguments, add them after `--`.
-        vars:
-            ORIGIN: "make/"
-            DESTINATION: "{{.ARTIFACTS_BUCKET}}/{{.VERSION}}"
-        cmd: aws s3 cp {{.ORIGIN}}/ s3://{{.DESTINATION}}/ --recursive --exclude "*/*" --exclude "builder-*.yml" {{.CLI_ARGS}}
-
-    artifacts:download:*:
-        desc: Downloads the specified artifacts version from the staging bucket. To add additional AWS CLI arguments, add them after `--`.
-        vars:
-            DL_VERSION: '{{ replace "v" "" (index .MATCH 0)}}'
-            ORIGIN: "{{.ARTIFACTS_BUCKET}}/{{.DL_VERSION}}"
-            DESTINATION: "artifacts/{{.DL_VERSION}}"
-        cmds:
-            - '{{.RMRF}} "{{.DESTINATION}}"'
-            - aws s3 cp s3://{{.ORIGIN}}/ {{.DESTINATION}}/ --recursive {{.CLI_ARGS}}
-
-    artifacts:publish:*:
-        desc: Publishes the specified artifacts version from the staging bucket to the releases bucket. To add additional AWS CLI arguments, add them after `--`.
-        vars:
-            UP_VERSION: '{{ replace "v" "" (index .MATCH 0)}}'
-            ORIGIN: "{{.ARTIFACTS_BUCKET}}/{{.UP_VERSION}}"
-            DESTINATION: "{{.RELEASES_BUCKET}}"
-        cmd: |
-            OUTPUT=$(aws s3 cp s3://{{.ORIGIN}}/ s3://{{.DESTINATION}}/ --recursive {{.CLI_ARGS}})
-
-            for line in $OUTPUT; do
-                PREFIX=${line%%{{.DESTINATION}}*}
-                SUFFIX=${line:${#PREFIX}}
-                if [[ -n "$SUFFIX" ]]; then
-                    echo "https://$SUFFIX"
-                fi
-            done
-    artifacts:snap:publish:*:
-        desc: Publishes the specified artifacts version to Snapcraft.
-        vars:
-            UP_VERSION: '{{ replace "v" "" (index .MATCH 0)}}'
-            CHANNEL: '{{if contains "beta" .UP_VERSION}}beta{{else}}beta,stable{{end}}'
-        cmd: |
-            echo "Releasing to channels: [{{.CHANNEL}}]"
-            for file in waveterm_{{.UP_VERSION}}_*.snap; do
-                echo "Publishing $file"
-                snapcraft upload --release={{.CHANNEL}} $file
-                echo "Finished publishing $file"
-            done
-
-    artifacts:winget:publish:*:
-        desc: Submits a version bump request to WinGet for the latest release.
-        status:
-            - exit {{if contains "beta" .UP_VERSION}}0{{else}}1{{end}}
-        vars:
-            UP_VERSION: '{{ replace "v" "" (index .MATCH 0)}}'
-        cmd: |
-            wingetcreate update {{.WINGET_PACKAGE}} -s -v {{.UP_VERSION}} -u "https://{{.RELEASES_BUCKET}}/{{.APP_NAME}}-win32-x64-{{.UP_VERSION}}.msi" -t {{.GITHUB_TOKEN}}
 
     dev:installwsh:
         desc: quick shortcut to rebuild wsh and install for macos arm64

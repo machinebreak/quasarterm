@@ -1,0 +1,55 @@
+# Quasar release pipeline — builds the Windows installer on version tags
+# and attaches it to the GitHub Release. Replaces the upstream Wave pipelines.
+name: Release
+run-name: Release ${{ github.ref_name }}
+on:
+    push:
+        tags:
+            - "v[0-9]+.[0-9]+.[0-9]+*"
+    workflow_dispatch:
+
+permissions:
+    contents: write
+
+env:
+    NODE_OPTIONS: --max-old-space-size=4096
+
+jobs:
+    windows-installer:
+        name: Windows installer
+        runs-on: windows-latest
+        steps:
+            - uses: actions/checkout@v6
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+            - name: Setup Go
+              uses: actions/setup-go@v5
+              with:
+                  go-version-file: go.mod
+                  cache: true
+            - name: Setup Zig
+              uses: mlugg/setup-zig@v2
+            - name: Setup Task
+              uses: arduino/setup-task@v2
+              with:
+                  version: 3.x
+                  repo-token: ${{ secrets.GITHUB_TOKEN }}
+            - name: Install npm dependencies
+              run: npm ci
+            - name: Package (backend + frontend + electron-builder)
+              run: task package
+            - name: Upload installer artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: quasar-windows
+                  path: make/*
+                  if-no-files-found: error
+            - name: Attach installer to release
+              if: startsWith(github.ref, 'refs/tags/')
+              uses: softprops/action-gh-release@v2
+              with:
+                  files: make/*
+                  generate_release_notes: true
