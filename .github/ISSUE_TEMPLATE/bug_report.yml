@@ -1,0 +1,46 @@
+name: Bug report
+description: Something in Quasar is broken or misbehaving
+labels: [bug]
+body:
+    - type: markdown
+      attributes:
+          value: Thanks for taking the time to file a bug report!
+    - type: input
+      id: version
+      attributes:
+          label: Quasar version
+          description: Found in the title bar or under Settings → About.
+          placeholder: v0.1.0
+      validations:
+          required: true
+    - type: input
+      id: os
+      attributes:
+          label: Operating system
+          placeholder: Windows 11 24H2
+      validations:
+          required: true
+    - type: textarea
+      id: what-happened
+      attributes:
+          label: What happened?
+          description: Also tell us what you expected to happen instead.
+      validations:
+          required: true
+    - type: textarea
+      id: repro
+      attributes:
+          label: Steps to reproduce
+          placeholder: |
+              1. Open ...
+              2. Run ...
+              3. See ...
+      validations:
+          required: true
+    - type: textarea
+      id: logs
+      attributes:
+          label: Logs / screenshots
+          description: Optional. Logs live in `%LOCALAPPDATA%\quasar\Data\quasar.log`.
+      validations:
+          required: false

@@ -1,0 +1,25 @@
+name: Feature request
+description: Suggest an idea for Quasar
+labels: [enhancement]
+body:
+    - type: textarea
+      id: problem
+      attributes:
+          label: What problem does this solve?
+          description: Describe the pain point — what are you trying to do that's hard today?
+      validations:
+          required: true
+    - type: textarea
+      id: solution
+      attributes:
+          label: Proposed solution
+          description: Optional. How would you like it to work?
+      validations:
+          required: false
+    - type: textarea
+      id: alternatives
+      attributes:
+          label: Alternatives considered
+          description: Optional. Other tools or workarounds you've tried.
+      validations:
+          required: false

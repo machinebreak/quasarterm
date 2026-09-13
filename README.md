@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/accounts.png" alt="Quasar accounts dashboard" width="100%">
+  <img src="docs/images/terminal.png" alt="Quasar running Claude Code, next to the Accounts dashboard and the widget rail" width="100%">
 </p>
 
 **Quasar** is a personal fork of [Wave Terminal](https://github.com/wavetermdev/waveterm) (Apache-2.0) rebuilt around one workflow: **living inside AI coding CLIs**. Wave's AI assistant, cloud services and branding are gone — in their place there's a full **account manager** and an **agent cockpit** that no other terminal has.
@@ -48,12 +48,24 @@
 - **Switch & Continue** — swap account and resume the latest conversation in the terminal
 - Tags, search and batch actions across providers
 
+<p align="center">
+  <img src="docs/images/accounts.png" alt="Accounts dashboard" width="100%">
+</p>
+
 ### 🖥 A terminal you'd expect
 
 - Blocks, editor & preview panes, **durable SSH sessions**, split layouts
 - Project-centric tabs: the launcher drops you straight into the right folder
-- **Canvas mode** (experimental): free-form windows, saved layouts and backgrounds
 - Fonts, themes and keybindings fully customizable
+
+### 🪟 Canvas mode (experimental)
+
+<p align="center">
+  <img src="docs/images/canvas.png" alt="Canvas mode: floating terminal, browser, accounts and files over a live desktop" width="100%">
+</p>
+
+- Free-form windows over a live desktop: terminal, browser, files, panels
+- Saved layouts and backgrounds
 
 ### 🔒 Private by default
 
@@ -93,4 +105,4 @@ Quasar is an independent fork and is not affiliated with Command Line Inc.
 
 ## Bugs & requests
 
-Open an issue at [github.com/machinebreak/quasarterm/issues](https://github.com/machinebreak/quasarterm/issues).
+Open an issue at [github.com/machinebreak/quasarterm/issues](https://github.com/machinebreak/quasarterm/issues) — see also [CONTRIBUTING.md](./CONTRIBUTING.md).
