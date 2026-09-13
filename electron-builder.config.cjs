@@ -13,8 +13,8 @@ const config = {
     appId: pkg.build.appId,
     productName: pkg.productName,
     executableName: pkg.productName,
+    asar: false,
     artifactName: "${productName}-${platform}-${arch}-${version}.${ext}",
-    generateUpdatesFilesForAllChannels: true,
     npmRebuild: false,
     nodeGypRebuild: false,
     electronCompile: false,
@@ -99,7 +99,7 @@ const config = {
         target: ["nsis", "msi", "zip"],
         signtoolOptions: windowsShouldSign && {
             signingHashAlgorithms: ["sha256"],
-            publisherName: "Command Line Inc",
+            publisherName: "Quasar",
             certificateSubjectName: "Command Line Inc",
             certificateSha1: process.env.SM_CODE_SIGNING_CERT_SHA1_HASH,
         },
@@ -116,10 +116,6 @@ const config = {
     rpm: {
         // this should remove /usr/lib/.build-id/ links which can conflict with other electron apps like slack
         fpm: ["--rpm-rpmbuild-define", "_build_id_links none"],
-    },
-    publish: {
-        provider: "generic",
-        url: "https://dl.waveterm.dev/releases-w2",
     },
     afterPack: (context) => {
         // This is a workaround to restore file permissions to the wavesrv binaries on macOS after packaging the universal binary.

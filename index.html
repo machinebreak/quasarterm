@@ -4,13 +4,91 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color scheme" content="light dark" />
-    <title>Wave</title>
+    <title>Quasar</title>
     <link rel="stylesheet" href="/fontawesome/css/fontawesome.min.css" />
     <link rel="stylesheet" href="/fontawesome/css/brands.min.css" />
     <link rel="stylesheet" href="/fontawesome/css/solid.min.css" />
     <link rel="stylesheet" href="/fontawesome/css/sharp-solid.min.css" />
     <link rel="stylesheet" href="/fontawesome/css/sharp-regular.min.css" />
     <link rel="stylesheet" href="/fontawesome/css/custom-icons.min.css" />
+    <script>
+      // Dev-only boot watchdog: if the renderer fails to boot (blank/gray window),
+      // surface the real error instead of showing nothing. Auto-removes once the
+      // app mounts. Skipped when served from file:// (production), so it never
+      // ships to end users.
+      (function () {
+        if (!location.protocol.startsWith("http")) return;
+        var chip = null;
+        var mounted = false;
+        var timer = null;
+        function hasApp() {
+          var main = document.getElementById("main");
+          return !!main && main.children.length > 0;
+        }
+        function ensureChip(kind, text) {
+          if (!chip) {
+            chip = document.createElement("div");
+            chip.style.cssText =
+              "position:fixed;left:10px;bottom:10px;z-index:2147483647;max-width:72ch;" +
+              "padding:8px 12px;border-radius:10px;font:12px/1.5 ui-monospace,Consolas,monospace;" +
+              "white-space:pre-wrap;word-break:break-word;box-shadow:0 4px 16px rgba(0,0,0,0.5);" +
+              "cursor:pointer;border:1px solid rgba(255,255,255,0.15);";
+            chip.title = "Click para ocultar";
+            chip.onclick = function () {
+              chip.remove();
+              chip = null;
+            };
+            (document.body || document.documentElement).appendChild(chip);
+          }
+          if (kind === "error") {
+            chip.style.background = "rgba(60,18,20,0.95)";
+            chip.style.color = "#ffb3b3";
+          } else {
+            chip.style.background = "rgba(28,30,28,0.95)";
+            chip.style.color = "#cfd4ce";
+          }
+          chip.textContent = text;
+        }
+        function tryRemove() {
+          if (mounted || !hasApp()) return;
+          mounted = true;
+          if (timer) clearTimeout(timer);
+          observer.disconnect();
+          if (chip) {
+            chip.remove();
+            chip = null;
+          }
+        }
+        var observer = new MutationObserver(tryRemove);
+        function arm() {
+          observer.observe(document.documentElement, { childList: true, subtree: true });
+        }
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", arm);
+        } else {
+          arm();
+        }
+        timer = setTimeout(function () {
+          if (!hasApp())
+            ensureChip("loading", "⏳ La app está tardando en arrancar… (en dev el primer arranque puede tardar ~20-30s). Este aviso desaparece solo cuando cargue.");
+        }, 12000);
+        window.addEventListener(
+          "error",
+          function (e) {
+            if (hasApp()) return;
+            var msg = (e && e.message) || "error desconocido";
+            if (e && e.filename) msg += "\n" + e.filename + ":" + (e.lineno || 0);
+            ensureChip("error", "⚠ La app falló al arrancar:\n" + msg + "\n\nCtrl+Shift+I → Console para más detalle (Ctrl+R recarga).");
+          },
+          true
+        );
+        window.addEventListener("unhandledrejection", function (e) {
+          if (hasApp()) return;
+          var r = e && e.reason ? e.reason.message || String(e.reason) : "promesa rechazada";
+          ensureChip("error", "⚠ La app falló al arrancar:\n" + r + "\n\nCtrl+Shift+I → Console para más detalle (Ctrl+R recarga).");
+        });
+      })();
+    </script>
     <script type="module" src="frontend/wave.ts"></script>
   </head>
   <body class="init" data-colorscheme="dark">
