@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { loadBadges, LoadBadgesEnv } from "@/app/store/badge";
+import { setBlockCliProvider } from "@/app/store/cliprovider";
 import { VTabBar } from "@/app/tab/vtabbar";
 import { VTabBarEnv } from "@/app/tab/vtabbarenv";
 import { useWaveEnv, WaveEnvContext } from "@/app/waveenv/waveenv";
 import { MockWaveEnv } from "@/preview/mock/mockwaveenv";
-import { makeTabBarMockEnv, TabBarMockWorkspaceId } from "@/preview/mock/tabbar-mock";
+import { badgeBlockId, makeTabBarMockEnv, TabBarMockTabs, TabBarMockWorkspaceId } from "@/preview/mock/tabbar-mock";
 import { PlatformLinux, PlatformMacOS, PlatformWindows } from "@/util/platformutil";
 import { useAtom, useAtomValue } from "jotai";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -42,6 +43,20 @@ function VTabBarPreviewInner({ platform, setPlatform }: VTabBarPreviewInnerProps
 
     useEffect(() => {
         loadBadges(loadBadgesEnv);
+    }, []);
+
+    // Simulates AI CLIs (claude, codex) running in two of the mock tabs by
+    // attaching a provider id to one of their blocks.
+    useEffect(() => {
+        const seedCliProvider = (tabId: string, providerId: string) => {
+            const tab = TabBarMockTabs.find((t) => t.tabId === tabId);
+            const badge = tab?.badges?.[0];
+            if (badge != null) {
+                setBlockCliProvider(badgeBlockId(tab.tabId, badge.badgeid), providerId);
+            }
+        };
+        seedCliProvider("preview-tab-2", "claude");
+        seedCliProvider("preview-tab-3", "codex");
     }, []);
 
     useEffect(() => {

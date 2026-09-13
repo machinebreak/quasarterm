@@ -36,6 +36,7 @@ import {
     getBestUnit,
     getLastModifiedTime,
     getSortIcon,
+    getSpecialNameIcon,
     handleFileDelete,
     handleRename,
     isIconValid,
@@ -135,12 +136,16 @@ function DirectoryTable({
     const columns = useMemo(
         () => [
             columnHelper.accessor("mimetype", {
-                cell: (info) => (
-                    <i
-                        className={getIconFromMimeType(info.getValue() ?? "")}
-                        style={{ color: getIconColor(info.getValue() ?? "") }}
-                    ></i>
-                ),
+                cell: (info) => {
+                    const special = getSpecialNameIcon(info.row.original.name ?? "");
+                    const mimetype = info.getValue() ?? "";
+                    return (
+                        <i
+                            className={special?.iconClass ?? getIconFromMimeType(mimetype)}
+                            style={{ color: special?.color ?? getIconColor(mimetype) }}
+                        ></i>
+                    );
+                },
                 header: () => <span></span>,
                 id: "logo",
                 size: 25,

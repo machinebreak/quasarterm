@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 const MaxAppNameLength = 50;
 const AppNameRegex = /^[a-zA-Z0-9_-]+$/;
 
-function CreateNewWaveApp({ onCreateApp }: { onCreateApp: (appName: string) => Promise<void> }) {
+function CreateNewApp({ onCreateApp }: { onCreateApp: (appName: string) => Promise<void> }) {
     const [newAppName, setNewAppName] = useState("");
     const [inputError, setInputError] = useState("");
     const [isCreating, setIsCreating] = useState(false);
@@ -51,7 +51,7 @@ function CreateNewWaveApp({ onCreateApp }: { onCreateApp: (appName: string) => P
 
     return (
         <div className="min-h-[80px]">
-            <h3 className="text-base font-medium mb-1 text-muted-foreground">Create New WaveApp</h3>
+            <h3 className="text-base font-medium mb-1 text-muted-foreground">Create New App</h3>
             <div className="relative">
                 <div className="flex w-full">
                     <input
@@ -142,7 +142,7 @@ export function AppSelectionModal() {
             data: { "builder:appid": appIdToUse },
         });
         globalStore.set(atoms.builderAppId, appIdToUse);
-        document.title = `WaveApp Builder (${appIdToUse})`;
+        document.title = `App Builder (${appIdToUse})`;
         getApi().setBuilderWindowAppId(appIdToUse);
     };
 
@@ -155,7 +155,7 @@ export function AppSelectionModal() {
             data: { "builder:appid": draftAppId },
         });
         globalStore.set(atoms.builderAppId, draftAppId);
-        document.title = `WaveApp Builder (${draftAppId})`;
+        document.title = `App Builder (${draftAppId})`;
         getApi().setBuilderWindowAppId(draftAppId);
     };
 
@@ -183,7 +183,7 @@ export function AppSelectionModal() {
     return (
         <FlexiModal className="min-w-[600px] w-[600px] max-h-[90vh] overflow-y-auto">
             <div className="w-full px-2 pt-0 pb-4">
-                <h2 className="text-2xl mb-2">Select a WaveApp to Edit</h2>
+                <h2 className="text-2xl mb-2">Select an App to Edit</h2>
 
                 {error && (
                     <div className="mb-6 px-4 py-3 bg-panel rounded">
@@ -196,7 +196,7 @@ export function AppSelectionModal() {
 
                 {apps.length > 0 && (
                     <div className="mb-2">
-                        <h3 className="text-base font-medium mb-1 text-muted-foreground">Existing WaveApps</h3>
+                        <h3 className="text-base font-medium mb-1 text-muted-foreground">Existing apps</h3>
                         <div className="space-y-2 max-h-[220px] overflow-y-auto">
                             {apps.map((appInfo) => (
                                 <button
@@ -227,7 +227,7 @@ export function AppSelectionModal() {
                     </div>
                 )}
 
-                <CreateNewWaveApp onCreateApp={handleCreateNew} />
+                <CreateNewApp onCreateApp={handleCreateNew} />
             </div>
         </FlexiModal>
     );

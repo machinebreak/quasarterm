@@ -7,6 +7,7 @@ import type { TabModel } from "@/app/store/tab-model";
 import { makeORef } from "@/app/store/wos";
 import { TabRpcClient } from "@/app/store/wshrpcutil";
 import { SecretsContent } from "@/app/view/waveconfig/secretscontent";
+import { SettingsContent } from "@/app/view/waveconfig/settingscontent";
 import { WaveConfigView } from "@/app/view/waveconfig/waveconfig";
 import type { WaveConfigEnv } from "@/app/view/waveconfig/waveconfigenv";
 import { base64ToString, stringToBase64 } from "@/util/util";
@@ -32,43 +33,19 @@ export type ConfigFile = {
 
 export const SecretNameRegex = /^[A-Za-z][A-Za-z0-9_]*$/;
 
-function validateAiJson(parsed: any): ValidationResult {
-    const keys = Object.keys(parsed);
-    for (const key of keys) {
-        if (!key.startsWith("ai@")) {
-            return { error: `Invalid key "${key}": all top-level keys must start with "ai@"` };
-        }
-    }
-    return { success: true };
-}
-
-function validateWaveAiJson(parsed: any): ValidationResult {
-    const keys = Object.keys(parsed);
-    const keyPattern = /^[a-zA-Z0-9_@.-]+$/;
-    for (const key of keys) {
-        if (!keyPattern.test(key)) {
-            return {
-                error: `Invalid key "${key}": keys must only contain letters, numbers, underscores, @, dots, and hyphens`,
-            };
-        }
-    }
-    return { success: true };
-}
-
 function makeConfigFiles(isWindows: boolean): ConfigFile[] {
     return [
         {
             name: "General",
             path: "settings.json",
             language: "json",
-            docsUrl: "https://docs.waveterm.dev/config",
             hasJsonView: true,
+            visualComponent: SettingsContent,
         },
         {
             name: "Connections",
             path: "connections.json",
             language: "json",
-            docsUrl: "https://docs.waveterm.dev/connections",
             description: isWindows ? "SSH hosts and WSL distros" : "SSH hosts",
             hasJsonView: true,
         },
@@ -76,24 +53,12 @@ function makeConfigFiles(isWindows: boolean): ConfigFile[] {
             name: "Sidebar Widgets",
             path: "widgets.json",
             language: "json",
-            docsUrl: "https://docs.waveterm.dev/customwidgets",
             hasJsonView: true,
-        },
-        {
-            name: "Wave AI Modes",
-            path: "waveai.json",
-            language: "json",
-            description: "Local models and BYOK",
-            docsUrl: "https://docs.waveterm.dev/waveai-modes",
-            validator: validateWaveAiJson,
-            hasJsonView: true,
-            // visualComponent: WaveAIVisualContent,
         },
         {
             name: "Tab Backgrounds",
             path: "backgrounds.json",
             language: "json",
-            docsUrl: "https://docs.waveterm.dev/tab-backgrounds",
             hasJsonView: true,
         },
         {
@@ -114,22 +79,13 @@ const deprecatedConfigFiles: ConfigFile[] = [
         deprecated: true,
         hasJsonView: true,
     },
-    {
-        name: "AI Presets",
-        path: "presets/ai.json",
-        language: "json",
-        deprecated: true,
-        docsUrl: "https://docs.waveterm.dev/ai-presets",
-        validator: validateAiJson,
-        hasJsonView: true,
-    },
 ];
 
 export class WaveConfigViewModel implements ViewModel {
     blockId: string;
     viewType = "waveconfig";
     viewIcon = atom("gear");
-    viewName = atom("Wave Config");
+    viewName = atom("Settings");
     viewComponent = WaveConfigView;
     noPadding = atom(true);
     nodeModel: BlockNodeModel;

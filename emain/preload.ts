@@ -36,10 +36,10 @@ contextBridge.exposeInMainWorld("api", {
         ipcRenderer.on("fullscreen-change", (_event, isFullScreen) => callback(isFullScreen)),
     onZoomFactorChange: (callback) =>
         ipcRenderer.on("zoom-factor-change", (_event, zoomFactor) => callback(zoomFactor)),
-    onUpdaterStatusChange: (callback) => ipcRenderer.on("app-update-status", (_event, status) => callback(status)),
-    getUpdaterStatus: () => ipcRenderer.sendSync("get-app-update-status"),
-    getUpdaterChannel: () => ipcRenderer.sendSync("get-updater-channel"),
-    installAppUpdate: () => ipcRenderer.send("install-app-update"),
+    onUpdaterStatusChange: (_callback) => {},
+    getUpdaterStatus: () => "up-to-date" as UpdaterStatus,
+    getUpdaterChannel: () => "latest",
+    installAppUpdate: () => {},
     onMenuItemAbout: (callback) => ipcRenderer.on("menu-item-about", callback),
     updateWindowControlsOverlay: (rect) => ipcRenderer.send("update-window-controls-overlay", rect),
     onReinjectKey: (callback) => ipcRenderer.on("reinject-key", (_event, waveEvent) => callback(waveEvent)),
@@ -51,6 +51,7 @@ contextBridge.exposeInMainWorld("api", {
     switchWorkspace: (workspaceId) => ipcRenderer.send("switch-workspace", workspaceId),
     deleteWorkspace: (workspaceId) => ipcRenderer.send("delete-workspace", workspaceId),
     setActiveTab: (tabId) => ipcRenderer.send("set-active-tab", tabId),
+    focusWindow: () => ipcRenderer.send("focus-window"),
     createTab: () => ipcRenderer.send("create-tab"),
     closeTab: (workspaceId, tabId, confirmClose) => ipcRenderer.invoke("close-tab", workspaceId, tabId, confirmClose),
     setWindowInitStatus: (status) => ipcRenderer.send("set-window-init-status", status),
@@ -62,7 +63,6 @@ contextBridge.exposeInMainWorld("api", {
     captureScreenshot: (rect: Rectangle) => ipcRenderer.invoke("capture-screenshot", rect),
     setKeyboardChordMode: () => ipcRenderer.send("set-keyboard-chord-mode"),
     clearWebviewStorage: (webContentsId: number) => ipcRenderer.invoke("clear-webview-storage", webContentsId),
-    setWaveAIOpen: (isOpen: boolean) => ipcRenderer.send("set-waveai-open", isOpen),
     closeBuilderWindow: () => ipcRenderer.send("close-builder-window"),
     incrementTermCommands: (opts?: { isRemote?: boolean; isWsl?: boolean; isDurable?: boolean }) =>
         ipcRenderer.send("increment-term-commands", opts),
@@ -72,6 +72,9 @@ contextBridge.exposeInMainWorld("api", {
     doRefresh: () => ipcRenderer.send("do-refresh"),
     getPathForFile: (file: File): string => webUtils.getPathForFile(file),
     saveTextFile: (fileName: string, content: string) => ipcRenderer.invoke("save-text-file", fileName, content),
+    openTextFile: (opts?: { title?: string; extensions?: string[] }) => ipcRenderer.invoke("open-text-file", opts),
+    openDirectoryDialog: (opts?: { title?: string }) => ipcRenderer.invoke("open-directory", opts),
+    importBackgroundImage: (opts?: { title?: string }) => ipcRenderer.invoke("import-bg-image", opts),
     setIsActive: () => ipcRenderer.invoke("set-is-active"),
 });
 

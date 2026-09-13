@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { FocusManager } from "@/app/store/focusManager";
-import { getSettingsKeyAtom } from "@/app/store/global";
+import { getSettingsKeyAtom, globalStore } from "@/app/store/global";
 import { BlockService } from "@/app/store/services";
 import * as WOS from "@/app/store/wos";
 import { atomWithThrottle, boundNumber, fireAndForget } from "@/util/util";
@@ -325,6 +325,9 @@ export class LayoutModel {
         });
 
         this.ephemeralNode = atom();
+        // Clear a stale ephemeral node as soon as its block leaves the tab
+        // (deleted by any path): otherwise its backdrop keeps blurring the tab.
+        globalStore.sub(this.tabAtom, () => this.validateEphemeralNode());
         this.magnifiedNodeSizeAtom = getSettingsKeyAtom("window:magnifiedblocksize");
 
         this.magnifiedNodeIdAtom = atom((get) => {
@@ -415,6 +418,10 @@ export class LayoutModel {
         if (this.treeState.rootNode == null) {
             return;
         }
+        if (this.onNodeDelete == null) {
+            // Not registered with a live tile layout yet — never delete on a half-initialized model.
+            return;
+        }
 
         walkNodes(this.treeState.rootNode, (node) => {
             if (node.data?.blockId) {
@@ -422,13 +429,56 @@ export class LayoutModel {
             }
         });
 
-        for (const blockId of tab.blockids || []) {
-            if (!layoutBlockIds.has(blockId)) {
+        const tabBlockIds = tab.blockids || [];
+        if (layoutBlockIds.size === 0 && tabBlockIds.length > 0) {
+            // The layout shows no blocks while the tab still has some: the tree has not
+            // loaded/synced yet. Cleaning up here used to wipe every block of the tab
+            // (and with it the workspace). Refuse to delete; a later pass will run with
+            // the real tree and clean up only actual orphans.
+            console.warn(
+                `layout: skipping orphan cleanup — layout tree has no blocks but tab has ${tabBlockIds.length}`
+            );
+            return;
+        }
+
+        // Ephemeral (overlay) blocks live outside the tree on purpose (e.g. the
+        // Settings overlay from the gear menu) — they are not orphans.
+        const ephemeralNode = this.getter(this.ephemeralNode);
+        const ephemeralBlockId = ephemeralNode?.data?.blockId ?? null;
+
+        for (const blockId of tabBlockIds) {
+            if (!layoutBlockIds.has(blockId) && blockId !== ephemeralBlockId) {
                 console.log("Cleaning up orphaned block:", blockId);
-                if (this.onNodeDelete) {
-                    await this.onNodeDelete({ blockId });
-                }
+                await this.onNodeDelete({ blockId });
             }
+        }
+    }
+
+    /**
+     * Clear the ephemeral node when its block is no longer part of the tab.
+     * A stale ephemeral node keeps rendering its backdrop (a blur layer over the
+     * whole tile layout) with nothing on top of it, which looks like the app is
+     * permanently blurred after the overlay's block gets deleted.
+     */
+    private validateEphemeralNode() {
+        const ephemeralNode = this.getter(this.ephemeralNode);
+        if (ephemeralNode == null) {
+            return;
+        }
+        const blockId = ephemeralNode.data?.blockId;
+        if (blockId == null) {
+            this.setter(this.ephemeralNode, undefined);
+            return;
+        }
+        const tab = this.getter(this.tabAtom);
+        const blockIds = tab?.blockids;
+        if (blockIds == null) {
+            // tab state not loaded yet — don't judge
+            return;
+        }
+        if (!blockIds.includes(blockId)) {
+            console.log(`layout: clearing stale ephemeral node for block ${blockId}`);
+            this.setter(this.ephemeralNode, undefined);
         }
     }
 
@@ -765,6 +815,7 @@ export class LayoutModel {
             this.treeState.leafOrder = getLeafOrder(newLeafs, newAdditionalProps);
             this.validateFocusedNode(this.treeState.leafOrder);
             this.validateMagnifiedNode(this.treeState.leafOrder, newAdditionalProps);
+            this.validateEphemeralNode();
             this.cleanupNodeModels(this.treeState.leafOrder);
             this.setter(
                 this.leafs,
@@ -792,6 +843,13 @@ export class LayoutModel {
         resizeAction?: LayoutTreeResizeNodeAction
     ) {
         if (!node.children?.length) {
+            if (node.data == null) {
+                // Malformed node (neither children nor data). Rendering it would
+                // crash in getNodeModel (node.data.blockId). Skip it instead —
+                // the next balance pass prunes it from the tree.
+                console.warn(`layout: skipping malformed node ${node.id}`);
+                return;
+            }
             leafs.push(node);
             const addlProps = additionalPropsMap[node.id];
             if (addlProps) {
@@ -1041,7 +1099,7 @@ export class LayoutModel {
      */
     getNodeModel(node: LayoutNode): NodeModel {
         const nodeid = node.id;
-        const blockId = node.data.blockId;
+        const blockId = node.data?.blockId;
         const addlPropsAtom = this.getNodeAdditionalPropertiesAtom(nodeid);
         if (!this.nodeModels.has(nodeid)) {
             this.nodeModels.set(nodeid, {
@@ -1064,9 +1122,7 @@ export class LayoutModel {
                 blockNum: atom((get) => get(this.leafOrder).findIndex((leafEntry) => leafEntry.nodeid === nodeid) + 1),
                 isFocused: atom((get) => {
                     const treeState = get(this.localTreeStateAtom);
-                    const isFocused = treeState.focusedNodeId === nodeid;
-                    const focusType = get(FocusManager.getInstance().focusType);
-                    return isFocused && focusType === "node";
+                    return treeState.focusedNodeId === nodeid;
                 }),
                 numLeafs: this.numLeafs,
                 isResizing: this.isResizing,

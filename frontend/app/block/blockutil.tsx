@@ -2,11 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { Button } from "@/app/element/button";
-import {
-    MetaKeyAtomFnType,
-    WaveEnv,
-    WaveEnvSubset,
-} from "@/app/waveenv/waveenv";
+import { MetaKeyAtomFnType, WaveEnv, WaveEnvSubset } from "@/app/waveenv/waveenv";
 import { IconButton, ToggleIconButton } from "@/element/iconbutton";
 import { MagnifyIcon } from "@/element/magnify";
 import { MenuButton } from "@/element/menubutton";
@@ -33,9 +29,6 @@ export function blockViewToIcon(view: string): string {
     if (view == "web") {
         return "globe";
     }
-    if (view == "waveai") {
-        return "sparkles";
-    }
     if (view == "help") {
         return "circle-question";
     }
@@ -44,6 +37,9 @@ export function blockViewToIcon(view: string): string {
     }
     if (view == "processviewer") {
         return "microchip";
+    }
+    if (view == "projectlauncher") {
+        return "folder-open";
     }
     return "square";
 }
@@ -61,9 +57,6 @@ export function blockViewToName(view: string): string {
     if (view == "web") {
         return "Web";
     }
-    if (view == "waveai") {
-        return "WaveAI";
-    }
     if (view == "help") {
         return "Help";
     }
@@ -72,6 +65,9 @@ export function blockViewToName(view: string): string {
     }
     if (view == "processviewer") {
         return "Processes";
+    }
+    if (view == "projectlauncher") {
+        return "Open Project";
     }
     return view;
 }

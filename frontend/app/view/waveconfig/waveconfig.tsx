@@ -35,7 +35,7 @@ const ConfigSidebar = memo(({ model }: ConfigSidebarProps) => {
     return (
         <div className="flex flex-col w-48 border-r border-border @w600:h-full @max-w600:absolute @max-w600:left-0.5 @max-w600:top-0 @max-w600:bottom-0.5 @max-w600:z-10 @max-w600:bg-background @max-w600:shadow-xl @max-w600:rounded-bl">
             <div className="flex items-center justify-between px-4 py-2 border-b border-border @w600:hidden">
-                <span className="font-semibold">Config Files</span>
+                <span className="font-semibold">Settings</span>
                 <button
                     onClick={() => setIsMenuOpen(false)}
                     className="hover:bg-secondary/50 rounded p-1 cursor-pointer transition-colors"
@@ -43,56 +43,61 @@ const ConfigSidebar = memo(({ model }: ConfigSidebarProps) => {
                     ✕
                 </button>
             </div>
-            {configFiles.map((file) => (
-                <div
-                    key={file.path}
-                    onClick={() => handleFileSelect(file)}
-                    className={`px-4 py-2 border-b border-border cursor-pointer transition-colors ${
-                        selectedFile?.path === file.path ? "bg-accentbg text-primary" : "hover:bg-secondary/50"
-                    }`}
-                >
-                    <div className="flex items-center gap-1">
-                        <div className="whitespace-nowrap overflow-hidden text-ellipsis flex-1">{file.name}</div>
-                        {configErrorFiles.has(file.path) && (
-                            <i className="fa fa-solid fa-circle-exclamation text-error text-[14px] shrink-0" />
+            <div className="px-4 pt-3 pb-1 text-[10.5px] font-medium uppercase tracking-wider text-muted @max-w600:hidden">
+                Settings
+            </div>
+            <div className="flex flex-col gap-0.5 overflow-y-auto p-2 pt-1">
+                {configFiles.map((file) => (
+                    <div
+                        key={file.path}
+                        onClick={() => handleFileSelect(file)}
+                        className={cn(
+                            "relative cursor-pointer rounded-lg px-3 py-2 transition-colors",
+                            selectedFile?.path === file.path
+                                ? "bg-hover text-foreground"
+                                : "text-secondary hover:bg-hover/50 hover:text-foreground"
+                        )}
+                    >
+                        {selectedFile?.path === file.path && (
+                            <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-full bg-accent" />
+                        )}
+                        <div className="flex items-center gap-1.5">
+                            <div className="flex-1 truncate text-[12.5px] font-medium">{file.name}</div>
+                            {configErrorFiles.has(file.path) && (
+                                <i className="fa fa-solid fa-circle-exclamation text-error text-[13px] shrink-0" />
+                            )}
+                        </div>
+                        {file.description && (
+                            <div className="mt-0.5 truncate text-[11px] text-muted">{file.description}</div>
                         )}
                     </div>
-                    {file.description && (
-                        <div className="text-xs text-muted mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
-                            {file.description}
+                ))}
+                {deprecatedConfigFiles.map((file) => (
+                    <div
+                        key={file.path}
+                        onClick={() => handleFileSelect(file)}
+                        className={cn(
+                            "relative cursor-pointer rounded-lg px-3 py-2 transition-colors",
+                            selectedFile?.path === file.path
+                                ? "bg-hover text-foreground"
+                                : "text-secondary hover:bg-hover/50 hover:text-foreground"
+                        )}
+                    >
+                        {selectedFile?.path === file.path && (
+                            <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-full bg-accent" />
+                        )}
+                        <div className="flex items-center gap-2 overflow-hidden">
+                            <span className="truncate text-[12.5px]">{file.name}</span>
+                            <span className="shrink-0 rounded bg-hover px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted">
+                                deprecated
+                            </span>
+                            {configErrorFiles.has(file.path) && (
+                                <i className="fa fa-solid fa-circle-exclamation text-error text-[13px] ml-auto shrink-0" />
+                            )}
                         </div>
-                    )}
-                </div>
-            ))}
-            {deprecatedConfigFiles.length > 0 && (
-                <>
-                    {deprecatedConfigFiles.map((file) => (
-                        <div
-                            key={file.path}
-                            onClick={() => handleFileSelect(file)}
-                            className={`px-4 py-2 border-b border-border cursor-pointer transition-colors ${
-                                selectedFile?.path === file.path ? "bg-accentbg text-primary" : "hover:bg-secondary/50"
-                            }`}
-                        >
-                            <div className="flex items-center gap-2 overflow-hidden">
-                                <span className="text-secondary truncate">{file.name}</span>
-                                <span
-                                    className={`text-xs px-1.5 py-0.5 rounded shrink-0 ${
-                                        selectedFile?.path === file.path
-                                            ? "text-primary/80 bg-secondary/50"
-                                            : "text-muted-foreground/70 bg-secondary/30"
-                                    }`}
-                                >
-                                    deprecated
-                                </span>
-                                {configErrorFiles.has(file.path) && (
-                                    <i className="fa fa-solid fa-circle-exclamation text-error text-[14px] ml-auto shrink-0" />
-                                )}
-                            </div>
-                        </div>
-                    ))}
-                </>
-            )}
+                    </div>
+                ))}
+            </div>
         </div>
     );
 });
@@ -217,10 +222,10 @@ const WaveConfigView = memo(({ blockId, model }: ViewComponentProps<WaveConfigVi
                                                 <button
                                                     onClick={() => model.saveFile()}
                                                     disabled={!hasChanges || isSaving}
-                                                    className={`px-3 py-1 rounded transition-colors text-sm ${
+                                                    className={`rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-colors ${
                                                         !hasChanges || isSaving
-                                                            ? "border border-border text-muted-foreground opacity-50"
-                                                            : "bg-accent/80 text-primary hover:bg-accent cursor-pointer"
+                                                            ? "border border-border/60 text-muted opacity-60"
+                                                            : "bg-accent text-background hover:bg-accenthover cursor-pointer"
                                                     }`}
                                                 >
                                                     {isSaving ? "Saving..." : "Save"}
@@ -231,7 +236,7 @@ const WaveConfigView = memo(({ blockId, model }: ViewComponentProps<WaveConfigVi
                                 </div>
                             </div>
                             {selectedFile.visualComponent && selectedFile.hasJsonView && (
-                                <div className="flex gap-0 border-b border-border">
+                                <div className="flex gap-1 border-b border-border px-3">
                                     <button
                                         onClick={() => {
                                             if (!model.confirmDiscardChanges()) return;
@@ -239,10 +244,10 @@ const WaveConfigView = memo(({ blockId, model }: ViewComponentProps<WaveConfigVi
                                             setActiveTab("visual");
                                         }}
                                         className={cn(
-                                            "px-4 pt-1 pb-1.5 cursor-pointer transition-colors text-secondary",
+                                            "-mb-px cursor-pointer border-b-2 px-3 pt-1.5 pb-1.5 text-[12.5px] transition-colors",
                                             activeTab === "visual"
-                                                ? "bg-highlightbg text-primary"
-                                                : "bg-transparent hover:bg-hover"
+                                                ? "border-accent text-foreground"
+                                                : "border-transparent text-secondary hover:text-foreground"
                                         )}
                                     >
                                         Visual
@@ -251,10 +256,10 @@ const WaveConfigView = memo(({ blockId, model }: ViewComponentProps<WaveConfigVi
                                     <button
                                         onClick={() => setActiveTab("json")}
                                         className={cn(
-                                            "px-4 pt-1 pb-1.5 cursor-pointer transition-colors text-secondary",
+                                            "-mb-px cursor-pointer border-b-2 px-3 pt-1.5 pb-1.5 text-[12.5px] transition-colors",
                                             activeTab === "json"
-                                                ? "bg-highlightbg text-primary"
-                                                : "bg-transparent hover:bg-hover"
+                                                ? "border-accent text-foreground"
+                                                : "border-transparent text-secondary hover:text-foreground"
                                         )}
                                     >
                                         Raw JSON

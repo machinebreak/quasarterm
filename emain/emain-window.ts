@@ -5,7 +5,15 @@ import { ClientService, ObjectService, WindowService, WorkspaceService } from "@
 import { waveEventSubscribeSingle } from "@/app/store/wps";
 import { RpcApi } from "@/app/store/wshclientapi";
 import { fireAndForget } from "@/util/util";
-import { BaseWindow, BaseWindowConstructorOptions, dialog, globalShortcut, ipcMain, screen, webContents } from "electron";
+import {
+    BaseWindow,
+    BaseWindowConstructorOptions,
+    dialog,
+    globalShortcut,
+    ipcMain,
+    screen,
+    webContents,
+} from "electron";
 import { globalEvents } from "emain/emain-events";
 import path from "path";
 import { debounce } from "throttle-debounce";
@@ -21,7 +29,6 @@ import { getElectronAppBasePath, isDev, unamePlatform } from "./emain-platform";
 import { getOrCreateWebViewForTab, getWaveTabViewByWebContentsId, WaveTabView } from "./emain-tabview";
 import { delay, ensureBoundsAreVisible, waveKeyToElectronKey } from "./emain-util";
 import { ElectronWshClient } from "./emain-wsh";
-import { updater } from "./updater";
 
 const DevInitTimeoutMs = 5000;
 
@@ -189,7 +196,7 @@ export class WaveBrowserWindow extends BaseWindow {
                 symbolColor: "white",
                 color: "#00000000",
             };
-            winOpts.icon = path.join(getElectronAppBasePath(), "public/logos/wave-logo-dark.png");
+            winOpts.icon = path.join(getElectronAppBasePath(), "public/logos/quasar-appicon.png");
             winOpts.autoHideMenuBar = !settings?.["window:showmenubar"];
             if (isTransparent) {
                 winOpts.transparent = true;
@@ -203,6 +210,7 @@ export class WaveBrowserWindow extends BaseWindow {
                 symbolColor: "#c3c8c2",
                 height: 32,
             };
+            winOpts.icon = path.join(getElectronAppBasePath(), "public/logos/quasar-appicon.png");
             if (isTransparent) {
                 winOpts.transparent = true;
             } else if (isBlur) {
@@ -301,7 +309,7 @@ export class WaveBrowserWindow extends BaseWindow {
             }
             this.closeAllDevTools();
             console.log("win 'close' handler fired", this.waveWindowId);
-            if (getGlobalIsQuitting() || updater?.status == "installing" || getGlobalIsRelaunching()) {
+            if (getGlobalIsQuitting() || getGlobalIsRelaunching()) {
                 return;
             }
             e.preventDefault();
@@ -332,7 +340,7 @@ export class WaveBrowserWindow extends BaseWindow {
         });
         this.on("closed", () => {
             console.log("win 'closed' handler fired", this.waveWindowId);
-            if (getGlobalIsQuitting() || updater?.status == "installing") {
+            if (getGlobalIsQuitting()) {
                 console.log("win quitting or updating", this.waveWindowId);
                 return;
             }
@@ -455,10 +463,13 @@ export class WaveBrowserWindow extends BaseWindow {
             return promise;
         }
         let timeoutHandle: ReturnType<typeof setTimeout> = null;
-        const timeoutPromise = new Promise<never>((_, reject) => {
+        const slowWarnPromise = new Promise<void>((resolve) => {
             timeoutHandle = setTimeout(() => {
+                // Fast dev inits are the norm, but cold Vite transforms can take 6-20s+.
+                // Only warn + surface devtools here: rejecting used to abort the init
+                // flow, which skipped the wave-init handshake and left the window blank.
                 console.log(
-                    `[dev] ${name} timed out after ${DevInitTimeoutMs}ms for tab ${tabId}, showing window for devtools`
+                    `[dev] ${name} still pending after ${DevInitTimeoutMs}ms for tab ${tabId}, showing window for devtools (continuing to wait)`
                 );
                 if (!this.isDestroyed() && !this.isVisible()) {
                     this.show();
@@ -466,11 +477,15 @@ export class WaveBrowserWindow extends BaseWindow {
                 if (this.activeTabView?.webContents && !this.activeTabView.webContents.isDevToolsOpened()) {
                     this.activeTabView.webContents.openDevTools();
                 }
-                reject(new Error(`[dev] ${name} timed out after ${DevInitTimeoutMs}ms`));
+                resolve();
             }, DevInitTimeoutMs);
         });
         try {
-            return await Promise.race([promise, timeoutPromise]);
+            // Wait for whichever settles first. If the "slow" warning fired, keep waiting
+            // for the real init instead of aborting — a slow init still finishes fine and
+            // the renderer's late "ready" must still get its wave-init handshake.
+            await Promise.race([promise, slowWarnPromise]);
+            return await promise;
         } finally {
             clearTimeout(timeoutHandle);
         }
@@ -747,6 +762,17 @@ ipcMain.on("set-active-tab", async (event, tabId) => {
     await ww?.setActiveTab(tabId, true);
 });
 
+ipcMain.on("focus-window", (event) => {
+    const ww = getWaveWindowByWebContentsId(event.sender.id);
+    if (ww != null) {
+        if (ww.isMinimized()) {
+            ww.restore();
+        }
+        ww.show();
+        ww.focus();
+    }
+});
+
 ipcMain.on("create-tab", async (event, _opts) => {
     const senderWc = event.sender;
     const ww = getWaveWindowByWebContentsId(senderWc.id);
@@ -755,13 +781,6 @@ ipcMain.on("create-tab", async (event, _opts) => {
     }
     event.returnValue = true;
     return null;
-});
-
-ipcMain.on("set-waveai-open", (event, isOpen: boolean) => {
-    const tabView = getWaveTabViewByWebContentsId(event.sender.id);
-    if (tabView) {
-        tabView.isWaveAIOpen = isOpen;
-    }
 });
 
 ipcMain.handle("close-tab", async (event, workspaceId: string, tabId: string, confirmClose: boolean) => {

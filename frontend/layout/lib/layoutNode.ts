@@ -187,7 +187,12 @@ export function balanceNode(
     walkNodes(
         node,
         (node) => {
-            if (!validateNode(node)) throw new Error("Invalid node");
+            if (!validateNode(node)) {
+                // Used to throw here, which bricked the whole layout until reload.
+                // Warn instead — the after-pass prunes malformed nodes so the tree
+                // self-heals instead of taking the app down.
+                console.warn(`layout: invalid node ${node.id} — pruning`);
+            }
             node.children = node.children?.flatMap((child) => {
                 if (child.flexDirection === node.flexDirection) {
                     child.flexDirection = reverseFlexDirection(node.flexDirection);
@@ -201,7 +206,11 @@ export function balanceNode(
             beforeWalkCallback?.(node);
         },
         (node) => {
-            node.children = node.children?.filter((v) => v);
+            // Prune children that ended up with neither data nor children — they
+            // are malformed and would crash the renderer if treated as leaves.
+            node.children = node.children?.filter(
+                (v) => v && (v.data != null || (v.children != null && v.children.length > 0))
+            );
             if (node.children?.length === 1 && !node.children[0].children) {
                 node.data = node.children[0].data;
                 node.id = node.children[0].id;

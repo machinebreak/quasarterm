@@ -16,7 +16,7 @@ function findHighestLogNumber(logsDir: string): number {
     const files = fs.readdirSync(logsDir);
     let maxNum = 0;
     for (const file of files) {
-        const match = file.match(/^waveapp\.(\d+)\.log$/);
+        const match = file.match(/^quasar\.(\d+)\.log$/);
         if (match) {
             const num = parseInt(match[1], 10);
             if (num > maxNum) {
@@ -36,7 +36,7 @@ function pruneOldLogs(logsDir: string): { pruned: string[]; error: any } {
     const logFiles: { name: string; num: number }[] = [];
 
     for (const file of files) {
-        const match = file.match(/^waveapp\.(\d+)\.log$/);
+        const match = file.match(/^quasar\.(\d+)\.log$/);
         if (match) {
             logFiles.push({ name: file, num: parseInt(match[1], 10) });
         }
@@ -67,7 +67,7 @@ function pruneOldLogs(logsDir: string): { pruned: string[]; error: any } {
 
 function rotateLogIfNeeded(): string | null {
     const waveDataDir = getWaveDataDir();
-    const logFile = path.join(waveDataDir, "waveapp.log");
+    const logFile = path.join(waveDataDir, "quasar.log");
     const logsDir = path.join(waveDataDir, "logs");
 
     if (!fs.existsSync(logsDir)) {
@@ -81,7 +81,7 @@ function rotateLogIfNeeded(): string | null {
     const stats = fs.statSync(logFile);
     if (stats.size > 10 * 1024 * 1024) {
         const nextNum = findHighestLogNumber(logsDir) + 1;
-        const rotatedPath = path.join(logsDir, `waveapp.${nextNum}.log`);
+        const rotatedPath = path.join(logsDir, `quasar.${nextNum}.log`);
         fs.renameSync(logFile, rotatedPath);
         return rotatedPath;
     }
@@ -103,7 +103,7 @@ try {
 }
 
 const loggerTransports: winston.transport[] = [
-    new winston.transports.File({ filename: path.join(getWaveDataDir(), "waveapp.log"), level: "info" }),
+    new winston.transports.File({ filename: path.join(getWaveDataDir(), "quasar.log"), level: "info" }),
 ];
 if (isDev) {
     loggerTransports.push(new winston.transports.Console());

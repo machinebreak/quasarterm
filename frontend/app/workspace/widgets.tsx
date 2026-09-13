@@ -2,11 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { Tooltip } from "@/app/element/tooltip";
+import { globalStore, refocusNode, withProjectCwd } from "@/app/store/global";
+import * as WOS from "@/app/store/wos";
 import { TabRpcClient } from "@/app/store/wshrpcutil";
 import { useWaveEnv, WaveEnv, WaveEnvSubset } from "@/app/waveenv/waveenv";
 import { shouldIncludeWidgetForWorkspace } from "@/app/workspace/widgetfilter";
 import { modalsModel } from "@/store/modalmodel";
-import { fireAndForget, isBlank, makeIconClass } from "@/util/util";
+import { fireAndForget, makeIconClass } from "@/util/util";
 import {
     autoUpdate,
     FloatingPortal,
@@ -19,6 +21,7 @@ import {
 import clsx from "clsx";
 import { useAtomValue } from "jotai";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { getCanvasModel } from "../canvas/canvas-model";
 
 export type WidgetsEnv = WaveEnvSubset<{
     isDev: WaveEnv["isDev"];
@@ -27,12 +30,12 @@ export type WidgetsEnv = WaveEnvSubset<{
     };
     rpc: {
         ListAllAppsCommand: WaveEnv["rpc"]["ListAllAppsCommand"];
+        SetConfigCommand: WaveEnv["rpc"]["SetConfigCommand"];
     };
     atoms: {
         fullConfigAtom: WaveEnv["atoms"]["fullConfigAtom"];
         hasConfigErrors: WaveEnv["atoms"]["hasConfigErrors"];
         workspaceId: WaveEnv["atoms"]["workspaceId"];
-        hasCustomAIPresetsAtom: WaveEnv["atoms"]["hasCustomAIPresetsAtom"];
     };
     createBlock: WaveEnv["createBlock"];
     showContextMenu: WaveEnv["showContextMenu"];
@@ -51,51 +54,73 @@ function sortByDisplayOrder(wmap: { [key: string]: WidgetConfigType }): WidgetCo
 
 type WidgetPropsType = {
     widget: WidgetConfigType;
-    mode: "normal" | "compact" | "supercompact";
     env: WidgetsEnv;
 };
 
-async function handleWidgetSelect(widget: WidgetConfigType, env: WidgetsEnv) {
-    const blockDef = widget.blockdef;
+// Widget panels are singletons per tab: clicking the rail icon of an
+// already-open widget focuses it instead of spawning a duplicate panel.
+// Terminals are exempt (multiple terminal windows are normal).
+const WidgetDedupeExemptViews = new Set(["term"]);
+
+// Finds an already-open widget block (by view type) in the current tab.
+export function findWidgetBlockInCurrentTab(view: string, env: WaveEnv): string {
+    const tabId = globalStore.get(env.atoms.staticTabId);
+    if (tabId == null) {
+        return null;
+    }
+    const tab = globalStore.get(env.wos.getWaveObjectAtom<Tab>(WOS.makeORef("tab", tabId)));
+    for (const blockId of tab?.blockids ?? []) {
+        const block = globalStore.get(env.wos.getWaveObjectAtom<Block>(WOS.makeORef("block", blockId)));
+        if (block?.meta?.view === view) {
+            return blockId;
+        }
+    }
+    return null;
+}
+
+function focusWidgetBlock(blockId: string, env: WaveEnv) {
+    try {
+        const tabId = globalStore.get(env.atoms.staticTabId);
+        const canvasModel = getCanvasModel(tabId);
+        canvasModel?.focusBlock(blockId); // raises + focuses in canvas mode; harmless otherwise
+    } catch (e) {
+        // best effort
+    }
+    try {
+        refocusNode(blockId); // keyboard focus in tiled mode
+    } catch (e) {
+        // best effort
+    }
+}
+
+async function handleWidgetSelect(widget: WidgetConfigType, env: WidgetsEnv, fullEnv?: WaveEnv) {
+    const view = widget.blockdef?.meta?.view;
+    if (fullEnv != null && view != null && !WidgetDedupeExemptViews.has(view)) {
+        const existingBlockId = findWidgetBlockInCurrentTab(view, fullEnv);
+        if (existingBlockId != null) {
+            focusWidgetBlock(existingBlockId, fullEnv);
+            return;
+        }
+    }
+    const blockDef = withProjectCwd(widget.blockdef);
     env.createBlock(blockDef, widget.magnified);
 }
 
-const Widget = memo(({ widget, mode, env }: WidgetPropsType) => {
-    const [isTruncated, setIsTruncated] = useState(false);
-    const labelRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (mode === "normal" && labelRef.current) {
-            const element = labelRef.current;
-            setIsTruncated(element.scrollWidth > element.clientWidth);
-        }
-    }, [mode, widget.label]);
-
-    const shouldDisableTooltip = mode !== "normal" ? false : !isTruncated;
-
+const Widget = memo(({ widget, env }: WidgetPropsType) => {
+    const fullEnv = useWaveEnv();
     return (
         <Tooltip
             content={widget.description || widget.label}
             placement="left"
-            disable={shouldDisableTooltip}
             divClassName={clsx(
-                "flex flex-col justify-center items-center w-full py-1.5 pr-0.5 text-secondary overflow-hidden rounded-sm hover:bg-hoverbg hover:text-white cursor-pointer",
-                mode === "supercompact" ? "text-sm" : "text-lg",
+                "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary text-[17px] cursor-pointer transition-colors hover:bg-hoverbg hover:text-white",
                 widget["display:hidden"] && "hidden"
             )}
-            divOnClick={() => handleWidgetSelect(widget, env)}
+            divOnClick={() => handleWidgetSelect(widget, env, fullEnv)}
         >
             <div style={{ color: widget.color }}>
                 <i className={makeIconClass(widget.icon, true, { defaultIcon: "browser" })}></i>
             </div>
-            {mode === "normal" && !isBlank(widget.label) ? (
-                <div
-                    ref={labelRef}
-                    className="text-xxs mt-0.5 w-full px-0.5 text-center whitespace-nowrap overflow-hidden text-ellipsis"
-                >
-                    {widget.label}
-                </div>
-            ) : null}
         </Tooltip>
     );
 });
@@ -256,6 +281,8 @@ const AppsFloatingWindow = memo(({ isOpen, onClose, referenceElement }: Floating
 const SettingsFloatingWindow = memo(
     ({ isOpen, onClose, referenceElement, hasConfigErrors }: FloatingWindowPropsType) => {
         const env = useWaveEnv<WidgetsEnv>();
+        const fullConfig = useAtomValue(env.atoms.fullConfigAtom);
+        const tabBarPosition = fullConfig?.settings?.["app:tabbar"] ?? "top";
         const { refs, floatingStyles, context } = useFloating({
             open: isOpen,
             onOpenChange: onClose,
@@ -284,6 +311,24 @@ const SettingsFloatingWindow = memo(
                         },
                     };
                     env.createBlock(blockDef, false, true);
+                    onClose();
+                },
+            },
+            {
+                icon: "arrow-up",
+                label: "Tab Bar: Top",
+                checked: tabBarPosition === "top",
+                onClick: () => {
+                    fireAndForget(() => env.rpc.SetConfigCommand(TabRpcClient, { "app:tabbar": "top" }));
+                    onClose();
+                },
+            },
+            {
+                icon: "table-columns",
+                label: "Tab Bar: Side",
+                checked: tabBarPosition === "left",
+                onClick: () => {
+                    fireAndForget(() => env.rpc.SetConfigCommand(TabRpcClient, { "app:tabbar": "left" }));
                     onClose();
                 },
             },
@@ -355,6 +400,7 @@ const SettingsFloatingWindow = memo(
                                 <i className={makeIconClass(item.icon, false)}></i>
                             </div>
                             <div className="text-sm whitespace-nowrap">{item.label}</div>
+                            {item.checked && <i className="fa fa-solid fa-check text-accent text-[13px] ml-auto"></i>}
                             {item.hasError && (
                                 <i className="fa fa-solid fa-circle-exclamation text-error text-[14px] ml-auto"></i>
                             )}
@@ -373,9 +419,7 @@ const Widgets = memo(() => {
     const fullConfig = useAtomValue(env.atoms.fullConfigAtom);
     const hasConfigErrors = useAtomValue(env.atoms.hasConfigErrors);
     const workspaceId = useAtomValue(env.atoms.workspaceId);
-    const [mode, setMode] = useState<"normal" | "compact" | "supercompact">("normal");
     const containerRef = useRef<HTMLDivElement>(null);
-    const measurementRef = useRef<HTMLDivElement>(null);
 
     const featureWaveAppBuilder = fullConfig?.settings?.["feature:waveappbuilder"] ?? false;
     const widgetsMap = fullConfig?.widgets ?? {};
@@ -388,51 +432,6 @@ const Widgets = memo(() => {
     const appsButtonRef = useRef<HTMLDivElement>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const settingsButtonRef = useRef<HTMLDivElement>(null);
-
-    const checkModeNeeded = useCallback(() => {
-        if (!containerRef.current || !measurementRef.current) return;
-
-        const containerHeight = containerRef.current.clientHeight;
-        const normalHeight = measurementRef.current.scrollHeight;
-        const gracePeriod = 10;
-
-        let newMode: "normal" | "compact" | "supercompact" = "normal";
-
-        if (normalHeight > containerHeight - gracePeriod) {
-            newMode = "compact";
-
-            // Calculate total widget count for supercompact check
-            const totalWidgets = (widgets?.length || 0) + 1;
-            const minHeightPerWidget = 32;
-            const requiredHeight = totalWidgets * minHeightPerWidget;
-
-            if (requiredHeight > containerHeight) {
-                newMode = "supercompact";
-            }
-        }
-
-        if (newMode !== mode) {
-            setMode(newMode);
-        }
-    }, [mode, widgets]);
-
-    useEffect(() => {
-        const resizeObserver = new ResizeObserver(() => {
-            checkModeNeeded();
-        });
-
-        if (containerRef.current) {
-            resizeObserver.observe(containerRef.current);
-        }
-
-        return () => {
-            resizeObserver.disconnect();
-        };
-    }, [checkModeNeeded]);
-
-    useEffect(() => {
-        checkModeNeeded();
-    }, [widgets, checkModeNeeded]);
 
     const handleWidgetsBarContextMenu = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -459,114 +458,56 @@ const Widgets = memo(() => {
         <>
             <div
                 ref={containerRef}
-                className="flex flex-col w-12 overflow-hidden py-1 -ml-1 select-none shrink-0"
+                className="flex flex-col w-12 overflow-hidden py-1.5 -ml-1 select-none shrink-0"
                 onContextMenu={handleWidgetsBarContextMenu}
             >
-                {mode === "supercompact" ? (
-                    <>
-                        <div className="grid grid-cols-2 gap-0 w-full">
-                            {widgets?.map((data, idx) => (
-                                <Widget key={`widget-${idx}`} widget={data} mode={mode} env={env} />
-                            ))}
-                        </div>
-                        <div className="flex-grow" />
-                        <div className="grid grid-cols-2 gap-0 w-full">
-                            {env.isDev() || featureWaveAppBuilder ? (
-                                <div
-                                    ref={appsButtonRef}
-                                    className="flex flex-col justify-center items-center w-full py-1.5 pr-0.5 text-secondary text-sm overflow-hidden rounded-sm hover:bg-hoverbg hover:text-white cursor-pointer"
-                                    onClick={() => setIsAppsOpen(!isAppsOpen)}
-                                >
-                                    <Tooltip content="Local WaveApps" placement="left" disable={isAppsOpen}>
-                                        <div>
-                                            <i className={makeIconClass("cube", true)}></i>
-                                        </div>
-                                    </Tooltip>
-                                </div>
-                            ) : null}
-                            <div
-                                ref={settingsButtonRef}
-                                className="flex flex-col justify-center items-center w-full py-1.5 pr-0.5 text-secondary text-sm overflow-hidden rounded-sm hover:bg-hoverbg hover:text-white cursor-pointer"
-                                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                            >
-                                <Tooltip
-                                    content={<SettingsTooltipContent hasConfigErrors={hasConfigErrors} />}
-                                    placement="left"
-                                    disable={isSettingsOpen}
-                                >
-                                    <div className="relative">
-                                        <i className={makeIconClass("gear", true)}></i>
-                                        {hasConfigErrors && (
-                                            <i className="fa fa-solid fa-circle-exclamation text-error absolute top-0 right-0 text-[10px] pointer-events-none"></i>
-                                        )}
-                                    </div>
-                                </Tooltip>
-                            </div>
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        {widgets?.map((data, idx) => (
-                            <Widget key={`widget-${idx}`} widget={data} mode={mode} env={env} />
-                        ))}
-                        <div className="flex-grow" />
-                        {env.isDev() || featureWaveAppBuilder ? (
-                            <div
-                                ref={appsButtonRef}
-                                className="flex flex-col justify-center items-center w-full py-1.5 pr-0.5 text-secondary text-lg overflow-hidden rounded-sm hover:bg-hoverbg hover:text-white cursor-pointer"
-                                onClick={() => setIsAppsOpen(!isAppsOpen)}
-                            >
-                                <Tooltip content="Local WaveApps" placement="left" disable={isAppsOpen}>
-                                    <div className="flex flex-col items-center w-full">
-                                        <div>
-                                            <i className={makeIconClass("cube", true)}></i>
-                                        </div>
-                                        {mode === "normal" && (
-                                            <div className="text-xxs mt-0.5 w-full px-0.5 text-center whitespace-nowrap overflow-hidden text-ellipsis">
-                                                apps
-                                            </div>
-                                        )}
-                                    </div>
-                                </Tooltip>
-                            </div>
-                        ) : null}
+                <div className="flex flex-col items-center gap-1 w-full flex-1 min-h-0 overflow-y-auto">
+                    {widgets?.map((data, idx) => (
+                        <Widget key={`widget-${idx}`} widget={data} env={env} />
+                    ))}
+                </div>
+                <div className="w-6 h-px my-1.5 shrink-0 bg-border" />
+                <div className="flex flex-col items-center gap-1 w-full shrink-0">
+                    {env.isDev() || featureWaveAppBuilder ? (
                         <div
-                            ref={settingsButtonRef}
-                            className="flex flex-col justify-center items-center w-full py-1.5 pr-0.5 text-secondary text-lg overflow-hidden rounded-sm hover:bg-hoverbg hover:text-white cursor-pointer"
-                            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                            ref={appsButtonRef}
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary text-[17px] cursor-pointer transition-colors hover:bg-hoverbg hover:text-white"
+                            onClick={() => setIsAppsOpen(!isAppsOpen)}
                         >
-                            <Tooltip
-                                content={<SettingsTooltipContent hasConfigErrors={hasConfigErrors} />}
-                                placement="left"
-                                disable={isSettingsOpen}
-                            >
-                                <div className="flex flex-col items-center w-full">
-                                    <div className="relative">
-                                        <i className={makeIconClass("gear", true)}></i>
-                                        {hasConfigErrors && (
-                                            <i
-                                                className={`fa fa-solid fa-circle-exclamation text-error absolute top-0 right-[-4px] pointer-events-none ${mode === "normal" ? "text-[14px]" : "text-[12px]"}`}
-                                            ></i>
-                                        )}
-                                    </div>
-                                    {mode === "normal" && (
-                                        <div className="text-xxs mt-0.5 w-full px-0.5 text-center whitespace-nowrap overflow-hidden text-ellipsis">
-                                            settings
-                                        </div>
-                                    )}
+                            <Tooltip content="Local Apps" placement="left" disable={isAppsOpen}>
+                                <div>
+                                    <i className={makeIconClass("cube", true)}></i>
                                 </div>
                             </Tooltip>
                         </div>
-                    </>
-                )}
-                {env.isDev() ? (
+                    ) : null}
                     <div
-                        className="flex justify-center items-center w-full py-1 text-accent text-[30px]"
-                        title="Running Wave Dev Build"
+                        ref={settingsButtonRef}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary text-[17px] cursor-pointer transition-colors hover:bg-hoverbg hover:text-white"
+                        onClick={() => setIsSettingsOpen(!isSettingsOpen)}
                     >
-                        <i className="fa fa-brands fa-dev fa-fw" />
+                        <Tooltip
+                            content={<SettingsTooltipContent hasConfigErrors={hasConfigErrors} />}
+                            placement="left"
+                            disable={isSettingsOpen}
+                        >
+                            <div className="relative">
+                                <i className={makeIconClass("gear", true)}></i>
+                                {hasConfigErrors && (
+                                    <i className="fa fa-solid fa-circle-exclamation text-error absolute -top-1 -right-1 text-[11px] pointer-events-none"></i>
+                                )}
+                            </div>
+                        </Tooltip>
                     </div>
-                ) : null}
+                    {env.isDev() ? (
+                        <div
+                            className="flex h-9 w-9 shrink-0 items-center justify-center text-accent/80 text-[20px]"
+                            title="Running Wave Dev Build"
+                        >
+                            <i className="fa fa-brands fa-dev fa-fw" />
+                        </div>
+                    ) : null}
+                </div>
             </div>
             {(env.isDev() || featureWaveAppBuilder) && appsButtonRef.current && (
                 <AppsFloatingWindow
@@ -583,38 +524,6 @@ const Widgets = memo(() => {
                     hasConfigErrors={hasConfigErrors}
                 />
             )}
-
-            <div
-                ref={measurementRef}
-                className="flex flex-col w-12 py-1 -ml-1 select-none absolute -z-10 opacity-0 pointer-events-none"
-            >
-                {widgets?.map((data, idx) => (
-                    <Widget key={`measurement-widget-${idx}`} widget={data} mode="normal" env={env} />
-                ))}
-                <div className="flex-grow" />
-                <div className="flex flex-col justify-center items-center w-full py-1.5 pr-0.5 text-lg">
-                    <div>
-                        <i className={makeIconClass("gear", true)}></i>
-                    </div>
-                    <div className="text-xxs mt-0.5 w-full px-0.5 text-center">settings</div>
-                </div>
-                {env.isDev() ? (
-                    <div className="flex flex-col justify-center items-center w-full py-1.5 pr-0.5 text-lg">
-                        <div>
-                            <i className={makeIconClass("cube", true)}></i>
-                        </div>
-                        <div className="text-xxs mt-0.5 w-full px-0.5 text-center">apps</div>
-                    </div>
-                ) : null}
-                {env.isDev() ? (
-                    <div
-                        className="flex justify-center items-center w-full py-1 text-accent text-[30px]"
-                        title="Running Wave Dev Build"
-                    >
-                        <i className="fa fa-brands fa-dev fa-fw" />
-                    </div>
-                ) : null}
-            </div>
         </>
     );
 });

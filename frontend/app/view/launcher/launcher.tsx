@@ -1,9 +1,9 @@
 // Copyright 2026, Command Line Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-import logoUrl from "@/app/asset/logo.svg?url";
+import logoUrl from "@/app/asset/quasar-logo-white.svg?url";
 import type { BlockNodeModel } from "@/app/block/blocktypes";
-import { atoms, globalStore, replaceBlock } from "@/app/store/global";
+import { atoms, globalStore, replaceBlock, withProjectCwd } from "@/app/store/global";
 import type { TabModel } from "@/app/store/tab-model";
 import { checkKeyPressed, keydownWrapper } from "@/util/keyutil";
 import { isBlank, makeIconClass } from "@/util/util";
@@ -130,7 +130,7 @@ export class LauncherViewModel implements ViewModel {
 
     async handleWidgetSelect(widget: WidgetConfigType) {
         try {
-            await replaceBlock(this.blockId, widget.blockdef, true);
+            await replaceBlock(this.blockId, withProjectCwd(widget.blockdef), true);
         } catch (error) {
             console.error("Error replacing block:", error);
         }

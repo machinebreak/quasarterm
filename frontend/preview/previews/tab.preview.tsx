@@ -13,6 +13,7 @@ interface PreviewTabEntry {
     active: boolean;
     badges?: Badge[] | null;
     flagColor?: string | null;
+    cliProviderId?: string;
 }
 
 const tabDefs: PreviewTabEntry[] = [
@@ -21,6 +22,7 @@ const tabDefs: PreviewTabEntry[] = [
         tabId: "preview-tab-2",
         tabName: "My Tab",
         active: true,
+        cliProviderId: "claude",
         badges: [
             { badgeid: "b2", icon: "circle-check", color: "#4ade80", priority: 3 },
             { badgeid: "b1", icon: "circle-small", color: "#fbbf24", priority: 1 },
@@ -31,10 +33,17 @@ const tabDefs: PreviewTabEntry[] = [
         tabId: "preview-tab-2b",
         tabName: "My Tab 2",
         active: false,
+        cliProviderId: "codex",
         badges: [
             { badgeid: "b2", icon: "bell", color: "#4ade80", priority: 3 },
             { badgeid: "b1", icon: "circle-small", color: "red", priority: 1 },
         ],
+    },
+    {
+        tabId: "preview-tab-2c",
+        tabName: "No Logo CLI",
+        active: false,
+        cliProviderId: "aider",
     },
     { tabId: "preview-tab-3", tabName: "T3", active: false, flagColor: "#4ade80" },
     {
@@ -97,6 +106,7 @@ export function TabPreview() {
                         isNew={false}
                         badges={tab.badges ?? null}
                         flagColor={tab.flagColor ?? null}
+                        cliProviderId={tab.cliProviderId}
                         onClick={() => setActiveTabId(tab.tabId)}
                         onClose={() => console.log("close", tab.tabId)}
                         onDragStart={() => {}}

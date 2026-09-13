@@ -68,12 +68,6 @@ function initGlobalWaveEventSubs(initOpts: WaveInitOpts) {
         },
     });
     waveEventSubscribeSingle({
-        eventType: "waveai:modeconfig",
-        handler: (event) => {
-            globalStore.set(atoms.waveaiModeConfigAtom, event.data.configs);
-        },
-    });
-    waveEventSubscribeSingle({
         eventType: "userinput",
         handler: (event) => {
             // console.log("userinput event handler", event);
@@ -92,9 +86,44 @@ function initGlobalWaveEventSubs(initOpts: WaveInitOpts) {
         },
     });
     waveEventSubscribeSingle({
-        eventType: "waveai:ratelimit",
+        eventType: "accounts:switched",
         handler: (event) => {
-            globalStore.set(atoms.waveAIRateLimitInfoAtom, event.data);
+            const data = event.data as SwitchEvent;
+            if (data == null) {
+                return;
+            }
+            // quiet by default: these follow the quota-alert setting
+            if (!(globalStore.get(getSettingsKeyAtom("accounts:quotaalert")) ?? false)) {
+                return;
+            }
+            try {
+                new Notification("Quasar", {
+                    body: `Switched ${data.provider} to ${data.tolabel ?? data.toaccountid}${data.reason === "quota-exhausted" ? " (quota exhausted)" : ""}`,
+                    silent: true,
+                });
+            } catch (e) {
+                console.log("failed to show account switch notification", e);
+            }
+        },
+    });
+    waveEventSubscribeSingle({
+        eventType: "accounts:quotaalert",
+        handler: (event) => {
+            const data = event.data as QuotaAlertEvent;
+            if (data == null) {
+                return;
+            }
+            if (!(globalStore.get(getSettingsKeyAtom("accounts:quotaalert")) ?? false)) {
+                return;
+            }
+            try {
+                new Notification("Quasar — low quota", {
+                    body: `${data.label ?? data.accountid} (${data.provider}): ${data.metric} at ${data.remainingpercent.toFixed(0)}%`,
+                    silent: false,
+                });
+            } catch (e) {
+                console.log("failed to show quota alert notification", e);
+            }
         },
     });
     setupBadgesSubscription();
@@ -154,6 +183,33 @@ function getOrefMetaKeyAtom<T extends keyof MetaType>(oref: string, key: T): Ato
 
 function useOrefMetaKeyAtom<T extends keyof MetaType>(oref: string, key: T): MetaType[T] {
     return useAtomValue(getOrefMetaKeyAtom(oref, key));
+}
+
+// The project folder a tab is bound to (set by the project launcher). New
+// terminals in that tab fall back to this directory.
+function getTabProjectCwd(tabId?: string): string | undefined {
+    const tid = tabId ?? globalStore.get(atoms.staticTabId);
+    if (tid == null) {
+        return undefined;
+    }
+    return globalStore.get(getTabMetaKeyAtom(tid, "cmd:cwd")) ?? undefined;
+}
+
+// Merges the tab project directory into a new block def: terminals start there
+// (only when no explicit cwd was given) and the Files widget — which defaults
+// to the home folder — reopens in the project folder the tab is bound to.
+function withProjectCwd(blockDef: BlockDef): BlockDef {
+    const projectCwd = getTabProjectCwd();
+    if (projectCwd == null) {
+        return blockDef;
+    }
+    if (blockDef?.meta?.view === "term" && blockDef.meta["cmd:cwd"] == null) {
+        return { ...blockDef, meta: { ...blockDef.meta, "cmd:cwd": projectCwd } };
+    }
+    if (blockDef?.meta?.view === "preview" && (blockDef.meta.file == null || blockDef.meta.file === "~")) {
+        return { ...blockDef, meta: { ...blockDef.meta, file: projectCwd } };
+    }
+    return blockDef;
 }
 
 function getConnConfigKeyAtom<T extends keyof ConnKeywords>(connName: string, key: T): Atom<ConnKeywords[T]> {
@@ -548,18 +604,18 @@ async function openLink(uri: string, forceOpenInternally = false) {
 }
 
 function registerBlockComponentModel(blockId: string, bcm: BlockComponentModel) {
-    blockComponentModelMap.set(blockId, bcm);
+    blockComponentModelMap.set(blockId, { ...bcm, blockId });
 }
 
 function unregisterBlockComponentModel(blockId: string) {
     blockComponentModelMap.delete(blockId);
 }
 
-function getBlockComponentModel(blockId: string): BlockComponentModel {
+function getBlockComponentModel(blockId: string): BlockComponentModel & { blockId: string } {
     return blockComponentModelMap.get(blockId);
 }
 
-function getAllBlockComponentModels(): BlockComponentModel[] {
+function getAllBlockComponentModels(): (BlockComponentModel & { blockId: string })[] {
     return Array.from(blockComponentModelMap.values());
 }
 
@@ -685,7 +741,6 @@ export {
     getBlockComponentModel,
     getBlockMetaKeyAtom,
     getBlockTermDurableAtom,
-    getTabMetaKeyAtom,
     getConfigBackgroundAtom,
     getConnConfigKeyAtom,
     getConnStatusAtom,
@@ -697,6 +752,8 @@ export {
     getOverrideConfigAtom,
     getSettingsKeyAtom,
     getSettingsPrefixAtom,
+    getTabMetaKeyAtom,
+    getTabProjectCwd,
     getUserName,
     globalPrimaryTabStartup,
     globalStore,
@@ -721,5 +778,6 @@ export {
     useOrefMetaKeyAtom,
     useOverrideConfigAtom,
     useSettingsKeyAtom,
+    withProjectCwd,
     WOS,
 };

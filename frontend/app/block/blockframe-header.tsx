@@ -21,6 +21,10 @@ import {
 import { globalStore } from "@/app/store/jotaiStore";
 import { uxCloseBlock } from "@/app/store/keymodel";
 import { TabRpcClient } from "@/app/store/wshrpcutil";
+import { getProviderIconUrl, providerDisplayName } from "@/app/view/accounts/providericons";
+import { providerIdFromCommand } from "@/app/view/term/clidetect";
+import type { TermViewModel } from "@/app/view/term/term-model";
+import type { TermWrap } from "@/app/view/term/termwrap";
 import { useWaveEnv } from "@/app/waveenv/waveenv";
 import { IconButton } from "@/element/iconbutton";
 import { NodeModel } from "@/layout/index";
@@ -207,6 +211,54 @@ const HeaderEndIcons = React.memo(({ viewModel, nodeModel, blockId }: HeaderEndI
 });
 HeaderEndIcons.displayName = "HeaderEndIcons";
 
+// Shows the logo of the AI CLI running in a terminal block (codex, claude,
+// cursor, ...). Providers without a logo are skipped.
+const TermCliLogoInner = React.memo(({ termWrap }: { termWrap: TermWrap }) => {
+    const shellStatus = jotai.useAtomValue(termWrap.shellIntegrationStatusAtom);
+    const lastCommand = jotai.useAtomValue(termWrap.lastCommandAtom);
+    if (shellStatus !== "running-command") {
+        return null;
+    }
+    const providerId = providerIdFromCommand(lastCommand);
+    const iconUrl = providerId ? getProviderIconUrl(providerId) : null;
+    if (iconUrl == null) {
+        return null;
+    }
+    return (
+        <div className="pointer-events-none flex items-center pl-1" title={providerDisplayName(providerId)}>
+            <img src={iconUrl} alt="" className="w-[14px] h-[14px]" draggable={false} />
+        </div>
+    );
+});
+TermCliLogoInner.displayName = "TermCliLogoInner";
+
+const TermCliLogo = React.memo(({ viewModel }: { viewModel: ViewModel }) => {
+    const termViewModel = viewModel as TermViewModel;
+    const [termWrap, setTermWrap] = React.useState<TermWrap | null>(termViewModel?.termRef?.current ?? null);
+    React.useEffect(() => {
+        if (viewModel?.viewType !== "term") {
+            return;
+        }
+        if (termViewModel?.termRef?.current) {
+            setTermWrap(termViewModel.termRef.current);
+            return;
+        }
+        const timer = window.setInterval(() => {
+            const tw = termViewModel?.termRef?.current;
+            if (tw) {
+                setTermWrap(tw);
+                window.clearInterval(timer);
+            }
+        }, 100);
+        return () => window.clearInterval(timer);
+    }, [viewModel]);
+    if (termWrap == null) {
+        return null;
+    }
+    return <TermCliLogoInner termWrap={termWrap} />;
+});
+TermCliLogo.displayName = "TermCliLogo";
+
 const BlockFrame_Header = ({
     nodeModel,
     viewModel,
@@ -271,6 +323,7 @@ const BlockFrame_Header = ({
                     isTerminalBlock={isTerminalBlock}
                 />
             )}
+            {useTermHeader && <TermCliLogo key="clilogo" viewModel={viewModel} />}
             {useTermHeader && termConfigedDurable != null && (
                 <DurableSessionFlyover
                     key="durable-status"

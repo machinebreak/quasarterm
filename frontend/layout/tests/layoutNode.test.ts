@@ -186,6 +186,30 @@ test("balanceNode - corrects flex directions", () => {
     assert(node1.children![0].flexDirection !== node1.flexDirection);
 });
 
+test("balanceNode - prunes malformed nodes instead of throwing", () => {
+    const valid = newLayoutNode(FlexDirection.Column, undefined, undefined, { blockId: "valid" });
+    const malformed: LayoutNode = {
+        id: "malformed",
+        flexDirection: FlexDirection.Column,
+        size: 10,
+        children: undefined,
+        data: undefined,
+    };
+    const root = newLayoutNode(FlexDirection.Row, undefined, [valid, malformed]);
+    let result: LayoutNode | undefined;
+    assert.doesNotThrow(
+        () => {
+            result = balanceNode(root);
+        },
+        undefined,
+        "balanceNode should not throw on a malformed node"
+    );
+    assert(
+        result != null && result.children === undefined && result.data?.blockId === "valid",
+        "the malformed node should be pruned and the valid leaf collapsed into the root"
+    );
+});
+
 test("balanceNode - collapses nodes with single grandchild 1", () => {
     let node1 = newLayoutNode(FlexDirection.Row, undefined, [
         newLayoutNode(FlexDirection.Column, undefined, [

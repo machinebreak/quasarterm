@@ -20,7 +20,7 @@ import {
     setWasActive,
 } from "./emain-activity";
 import { createBuilderWindow, getAllBuilderWindows, getBuilderWindowByWebContentsId } from "./emain-builder";
-import { callWithOriginalXdgCurrentDesktopAsync, unamePlatform } from "./emain-platform";
+import { callWithOriginalXdgCurrentDesktopAsync, getWaveConfigDir, unamePlatform } from "./emain-platform";
 import { getWaveTabViewByWebContentsId } from "./emain-tabview";
 import { handleCtrlShiftState } from "./emain-util";
 import { getWaveVersion } from "./emain-wavesrv";
@@ -528,6 +528,79 @@ export function initIpcHandlers() {
         } catch (err) {
             console.error("error saving scrollback file", err);
             return false;
+        }
+    });
+
+    electron.ipcMain.handle("open-text-file", async (event, opts?: { title?: string; extensions?: string[] }) => {
+        const ww = electron.BrowserWindow.fromWebContents(event.sender);
+        if (ww == null) {
+            return null;
+        }
+        const result = await electron.dialog.showOpenDialog(ww, {
+            title: opts?.title ?? "Open File",
+            properties: ["openFile"],
+            filters: [{ name: "Files", extensions: opts?.extensions ?? ["json"] }],
+        });
+        if (result.canceled || result.filePaths.length === 0) {
+            return null;
+        }
+        const filePath = result.filePaths[0];
+        try {
+            const content = await fs.promises.readFile(filePath, "utf-8");
+            const fileName = filePath.split(/[\\/]/).pop() ?? filePath;
+            return { fileName, content };
+        } catch (err) {
+            console.error("error reading text file", err);
+            return null;
+        }
+    });
+
+    electron.ipcMain.handle("open-directory", async (event, opts?: { title?: string }) => {
+        const ww = electron.BrowserWindow.fromWebContents(event.sender);
+        if (ww == null) {
+            return null;
+        }
+        const result = await electron.dialog.showOpenDialog(ww, {
+            title: opts?.title ?? "Open Folder",
+            properties: ["openDirectory", "createDirectory"],
+        });
+        if (result.canceled || result.filePaths.length === 0) {
+            return null;
+        }
+        return result.filePaths[0];
+    });
+
+    // pick an image (or animated gif) and copy it into <configdir>/backgrounds, returning the imported path
+    electron.ipcMain.handle("import-bg-image", async (event, opts?: { title?: string }) => {
+        const ww = electron.BrowserWindow.fromWebContents(event.sender);
+        if (ww == null) {
+            return null;
+        }
+        const result = await electron.dialog.showOpenDialog(ww, {
+            title: opts?.title ?? "Import Background Image",
+            properties: ["openFile", "dontAddToRecent"],
+            filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "webp", "gif", "bmp", "avif", "svg"] }],
+        });
+        if (result.canceled || result.filePaths.length === 0) {
+            return null;
+        }
+        const srcPath = result.filePaths[0];
+        try {
+            const bgDir = path.join(getWaveConfigDir(), "backgrounds");
+            await fs.promises.mkdir(bgDir, { recursive: true });
+            const srcExt = path.extname(srcPath).toLowerCase() || ".png";
+            const srcBase = path
+                .basename(srcPath, path.extname(srcPath))
+                .replace(/[^a-zA-Z0-9-_]+/g, "-")
+                .replace(/^-+|-+$/g, "")
+                .slice(0, 48);
+            const destPath = path.join(bgDir, `${srcBase || "bg"}-${Date.now()}${srcExt}`);
+            await fs.promises.copyFile(srcPath, destPath);
+            console.log("imported background image to", destPath);
+            return destPath;
+        } catch (err) {
+            console.error("error importing background image", err);
+            return null;
         }
     });
 }

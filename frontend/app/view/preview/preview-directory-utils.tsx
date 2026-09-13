@@ -76,6 +76,46 @@ export function getSortIcon(sortType: string | boolean): React.ReactNode {
     }
 }
 
+// Icons for well-known filenames that either have no extension (Makefile) or
+// deserve a nicer icon than their mimetype gives them (package.json, go.mod).
+const specialFileIcons: { [key: string]: { iconClass: string; color: string } } = {
+    makefile: { iconClass: "fa fa-solid fa-screwdriver-wrench fa-fw", color: "#e2b93d" },
+    dockerfile: { iconClass: "fa fa-brands fa-docker fa-fw", color: "#2496ed" },
+    "docker-compose.yml": { iconClass: "fa fa-brands fa-docker fa-fw", color: "#2496ed" },
+    "docker-compose.yaml": { iconClass: "fa fa-brands fa-docker fa-fw", color: "#2496ed" },
+    ".gitignore": { iconClass: "fa fa-brands fa-git-alt fa-fw", color: "#f14e32" },
+    ".gitattributes": { iconClass: "fa fa-brands fa-git-alt fa-fw", color: "#f14e32" },
+    ".gitmodules": { iconClass: "fa fa-brands fa-git-alt fa-fw", color: "#f14e32" },
+    "package.json": { iconClass: "fa fa-brands fa-npm fa-fw", color: "#cb3837" },
+    "package-lock.json": { iconClass: "fa fa-brands fa-npm fa-fw", color: "#cb3837" },
+    "go.mod": { iconClass: "fa fa-brands fa-golang fa-fw", color: "#00add8" },
+    "go.sum": { iconClass: "fa fa-brands fa-golang fa-fw", color: "#00add8" },
+    "cargo.toml": { iconClass: "fa fa-brands fa-rust fa-fw", color: "#dea584" },
+    "cargo.lock": { iconClass: "fa fa-brands fa-rust fa-fw", color: "#dea584" },
+    "requirements.txt": { iconClass: "fa fa-brands fa-python fa-fw", color: "#3776ab" },
+    "pyproject.toml": { iconClass: "fa fa-brands fa-python fa-fw", color: "#3776ab" },
+    license: { iconClass: "fa fa-solid fa-file-contract fa-fw", color: "#e2b93d" },
+    "license.md": { iconClass: "fa fa-solid fa-file-contract fa-fw", color: "#e2b93d" },
+    "license.txt": { iconClass: "fa fa-solid fa-file-contract fa-fw", color: "#e2b93d" },
+};
+
+export function getSpecialNameIcon(name: string): { iconClass: string; color: string } | null {
+    if (isBlank(name)) {
+        return null;
+    }
+    const lower = name.toLowerCase();
+    if (specialFileIcons[lower] != null) {
+        return specialFileIcons[lower];
+    }
+    if (lower.startsWith(".env")) {
+        return { iconClass: "fa fa-solid fa-gear-code fa-fw", color: "#e2b93d" };
+    }
+    if (lower.startsWith("makefile.") || lower === "gnumakefile") {
+        return specialFileIcons["makefile"];
+    }
+    return null;
+}
+
 export function cleanMimetype(input: string): string {
     const truncated = input.split(";")[0];
     return truncated.trim();

@@ -1,8 +1,7 @@
 // Copyright 2025, Command Line Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-import { fireAndForget } from "@/util/util";
-import { app, dialog, ipcMain, shell } from "electron";
+import { app, dialog, ipcMain } from "electron";
 import envPaths from "env-paths";
 import { existsSync, mkdirSync } from "fs";
 import os from "os";
@@ -11,10 +10,10 @@ import { WaveDevVarName, WaveDevViteVarName } from "../frontend/util/isdev";
 import * as keyutil from "../frontend/util/keyutil";
 
 // This is a little trick to ensure that Electron puts all its runtime data into a subdirectory to avoid conflicts with our own data.
-// On macOS, it will store to ~/Library/Application \Support/waveterm/electron
-// On Linux, it will store to ~/.config/waveterm/electron
-// On Windows, it will store to %LOCALAPPDATA%/waveterm/electron
-app.setName("waveterm/electron");
+// On macOS, it will store to ~/Library/Application \Support/quasar/electron
+// On Linux, it will store to ~/.config/quasar/electron
+// On Windows, it will store to %LOCALAPPDATA%/quasar/electron
+app.setName("quasar/electron");
 
 const isDev = !app.isPackaged;
 const isDevVite = isDev && process.env.ELECTRON_RENDERER_URL;
@@ -26,13 +25,13 @@ if (isDevVite) {
     process.env[WaveDevViteVarName] = "1";
 }
 
-const waveDirNamePrefix = "waveterm";
+const waveDirNamePrefix = "quasar";
 const waveDirNameSuffix = isDev ? "dev" : "";
 const waveDirName = `${waveDirNamePrefix}${waveDirNameSuffix ? `-${waveDirNameSuffix}` : ""}`;
 
-const paths = envPaths("waveterm", { suffix: waveDirNameSuffix });
+const paths = envPaths("quasar", { suffix: waveDirNameSuffix });
 
-app.setName(isDev ? "Wave (Dev)" : "Wave");
+app.setName(isDev ? "Quasar (Dev)" : "Quasar");
 const unamePlatform = process.platform;
 const unameArch: string = process.arch;
 keyutil.setKeyUtilPlatform(unamePlatform);
@@ -46,29 +45,16 @@ export function checkIfRunningUnderARM64Translation(fullConfig: FullConfigType) 
         console.log("Running under ARM64 translation, alerting user");
         const dialogOpts: Electron.MessageBoxOptions = {
             type: "warning",
-            buttons: ["Dismiss", "Learn More"],
-            title: "Wave has detected a performance issue",
-            message: `Wave is running in ARM64 translation mode which may impact performance.\n\nRecommendation: Download the native ARM64 version from our website for optimal performance.`,
+            buttons: ["OK"],
+            title: "Quasar has detected a performance issue",
+            message: `Quasar is running in ARM64 translation mode which may impact performance.\n\nRecommendation: use the native ARM64 build.`,
         };
-
-        const choice = dialog.showMessageBoxSync(null, dialogOpts);
-        if (choice === 1) {
-            // Open the documentation URL
-            console.log("User chose to learn more");
-            fireAndForget(() =>
-                shell.openExternal(
-                    "https://docs.waveterm.dev/faq#why-does-wave-warn-me-about-arm64-translation-when-it-launches"
-                )
-            );
-            throw new Error("User redirected to docsite to learn more about ARM64 translation, exiting");
-        } else {
-            console.log("User dismissed the dialog");
-        }
+        dialog.showMessageBoxSync(null, dialogOpts);
     }
 }
 
 /**
- * Gets the path to the old Wave home directory (defaults to `~/.waveterm`).
+ * Gets the path to the old home directory (defaults to `~/.quasar`).
  * @returns The path to the directory if it exists and contains valid data for the current app, otherwise null.
  */
 function getWaveHomeDir(): string {
@@ -79,8 +65,7 @@ function getWaveHomeDir(): string {
             home = path.join(homeDir, `.${waveDirName}`);
         }
     }
-    // If home exists and it has `wave.lock` in it, we know it has valid data from Wave >=v0.8. Otherwise, it could be for WaveLegacy (<v0.8)
-    if (home && existsSync(home) && existsSync(path.join(home, "wave.lock"))) {
+    if (home && existsSync(home) && existsSync(path.join(home, "quasar.lock"))) {
         return home;
     }
     return null;

@@ -7,7 +7,9 @@ import { TabRpcClient } from "@/app/store/wshrpcutil";
 import { WebView, WebViewModel } from "@/app/view/webview/webview";
 import { atom } from "jotai";
 
-const docsiteUrl = "https://docs.waveterm.dev/?ref=app";
+const docsiteUrl = `data:text/html,${encodeURIComponent(
+    `<html><head><meta charset="utf-8"><style>body{background:#0b0b0b;color:#e5e5e5;font-family:Inter,system-ui,sans-serif;padding:40px}h1{font-size:22px;margin-bottom:8px}p{color:#a3a3a3;line-height:1.6}code{background:#1a1a1a;padding:2px 6px;border-radius:4px}</style></head><body><h1>Quasar Help</h1><p>Common shortcuts:</p><ul><li><code>Cmd/Ctrl + t</code> — new tab</li><li><code>Cmd/Ctrl + n</code> — new terminal block</li><li><code>Cmd/Ctrl + d</code> — split right</li><li><code>Cmd/Ctrl + Shift + d</code> — split down</li><li><code>Ctrl + Shift + arrows</code> — navigate blocks</li><li><code>Alt/Cmd + 1-9</code> — switch tab</li></ul><p>Open the Accounts view from the launcher to manage your AI CLI accounts.</p></body></html>`
+)};`;
 
 class HelpViewModel extends WebViewModel {
     get viewComponent(): ViewComponent {

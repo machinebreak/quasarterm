@@ -40,6 +40,7 @@ import {
     unamePlatform,
 } from "./emain-platform";
 import { ensureHotSpareTab, setMaxTabCacheSize } from "./emain-tabview";
+import { initTray } from "./emain-tray";
 import { getIsWaveSrvDead, getWaveSrvProc, getWaveSrvReady, runWaveSrv } from "./emain-wavesrv";
 import {
     createBrowserWindow,
@@ -56,7 +57,6 @@ import {
 } from "./emain-window";
 import { ElectronWshClient, initElectronWshClient } from "./emain-wsh";
 import { getLaunchSettings } from "./launchsettings";
-import { configureAutoUpdater, updater } from "./updater";
 
 const electronApp = electron.app;
 
@@ -70,7 +70,7 @@ electron.nativeTheme.themeSource = "dark";
 console.log = log;
 console.log(
     sprintf(
-        "waveterm-app starting, data_dir=%s, config_dir=%s electronpath=%s gopath=%s arch=%s/%s electron=%s",
+        "quasar starting, data_dir=%s, config_dir=%s electronpath=%s gopath=%s arch=%s/%s electron=%s",
         waveDataDir,
         waveConfigDir,
         getElectronAppBasePath(),
@@ -81,7 +81,17 @@ console.log(
     )
 );
 if (isDev) {
-    console.log("waveterm-app WAVETERM_DEV set");
+    console.log("quasar WAVETERM_DEV set");
+}
+
+// Dev-only: expose the Chrome DevTools Protocol for the renderer so the live
+// app can be inspected (QUASAR_DEBUG_PORT=9222 npm run dev).
+if (isDev && process.env.QUASAR_DEBUG_PORT) {
+    const debugPort = Number(process.env.QUASAR_DEBUG_PORT);
+    if (Number.isFinite(debugPort) && debugPort > 0) {
+        electronApp.commandLine.appendSwitch("remote-debugging-port", String(debugPort));
+        console.log("quasar remote debugging enabled on port", debugPort);
+    }
 }
 
 function handleWSEvent(evtMsg: WSEventType) {
@@ -172,8 +182,6 @@ function logActiveState() {
         const astate = getActivityState();
         const activity: ActivityUpdate = { openminutes: 1 };
         const ww = focusedWaveWindow;
-        const activeTabView = ww?.activeTabView;
-        const isWaveAIOpen = activeTabView?.isWaveAIOpen ?? false;
 
         if (astate.wasInFg) {
             activity.fgminutes = 1;
@@ -207,12 +215,6 @@ function logActiveState() {
         }
         if (termCmdDurableCount > 0) {
             props["activity:termcommands:durable"] = termCmdDurableCount;
-        }
-        if (astate.wasActive && isWaveAIOpen) {
-            props["activity:waveaiactiveminutes"] = 1;
-        }
-        if (astate.wasInFg && isWaveAIOpen) {
-            props["activity:waveaifgminutes"] = 1;
         }
 
         try {
@@ -279,7 +281,7 @@ electronApp.on("before-quit", (e) => {
             type: "question",
             buttons: ["Cancel", "Quit"],
             title: "Confirm Quit",
-            message: "Are you sure you want to quit Wave Terminal?",
+            message: "Are you sure you want to quit Quasar?",
             defaultId: 0,
             cancelId: 0,
         });
@@ -291,7 +293,6 @@ electronApp.on("before-quit", (e) => {
         return;
     }
     setGlobalIsQuitting(true);
-    updater?.stop();
     if (unamePlatform == "win32") {
         // win32 doesn't have a SIGINT, so we just let electron die, which
         // ends up killing wavesrv via closing it's stdin.
@@ -381,7 +382,7 @@ async function appMain() {
     const startTs = Date.now();
     const instanceLock = electronApp.requestSingleInstanceLock();
     if (!instanceLock) {
-        console.log("waveterm-app could not get single-instance-lock, shutting down");
+        console.log("quasar could not get single-instance-lock, shutting down");
         setUserConfirmedQuit(true);
         electronApp.quit();
         return;
@@ -421,7 +422,7 @@ async function appMain() {
 
     makeAndSetAppMenu();
     makeDockTaskbar();
-    await configureAutoUpdater();
+    initTray(fullConfig);
     setGlobalIsStarting(false);
     if (fullConfig?.settings?.["window:maxtabcachesize"] != null) {
         setMaxTabCacheSize(fullConfig.settings["window:maxtabcachesize"]);

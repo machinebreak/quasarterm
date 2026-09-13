@@ -97,15 +97,31 @@ export function handleCtrlShiftState(sender: Electron.WebContents, waveEvent: Wa
     }
 }
 
+// In dev the window navigates to the live dev-server URL on hot-reload. The
+// server does not always land on 5173/5174 (other processes may hold those
+// ports), so accept any localhost index.html on the dev port range — otherwise
+// the navigation gets hijacked to the external browser and the window goes blank.
+function isDevServerIndexUrl(url: string): boolean {
+    if (electron.app.isPackaged) {
+        return false;
+    }
+    try {
+        const parsed = new URL(url);
+        if (parsed.hostname !== "localhost" && parsed.hostname !== "127.0.0.1") {
+            return false;
+        }
+        if (!parsed.pathname.endsWith("/index.html")) {
+            return false;
+        }
+        const portNum = Number(parsed.port);
+        return portNum >= 5173 && portNum <= 5179;
+    } catch {
+        return false;
+    }
+}
+
 export function shNavHandler(event: Electron.Event<Electron.WebContentsWillNavigateEventParams>, url: string) {
-    const isDev = !electron.app.isPackaged;
-    if (
-        isDev &&
-        (url.startsWith("http://127.0.0.1:5173/index.html") ||
-            url.startsWith("http://localhost:5173/index.html") ||
-            url.startsWith("http://127.0.0.1:5174/index.html") ||
-            url.startsWith("http://localhost:5174/index.html"))
-    ) {
+    if (isDevServerIndexUrl(url)) {
         // this is a dev-mode hot-reload, ignore it
         console.log("allowing hot-reload of index.html");
         return;
@@ -131,57 +147,64 @@ function frameOrAncestorHasName(frame: Electron.WebFrameMain, name: string): boo
 }
 
 export function shFrameNavHandler(event: Electron.Event<Electron.WebContentsWillFrameNavigateEventParams>) {
-    if (!event.frame?.parent) {
-        // only use this handler to process iframe events (non-iframe events go to shNavHandler)
-        return;
-    }
-    const url = event.url;
-    console.log(`frame-navigation url=${url} frame=${event.frame.name}`);
-    if (event.frame.name == "webview") {
-        // "webview" links always open in new window
-        // this will *not* effect the initial load because srcdoc does not count as an electron navigation
-        console.log("open external, frameNav", url);
-        event.preventDefault();
-        electron.shell.openExternal(url);
-        return;
-    }
-    if (
-        frameOrAncestorHasName(event.frame, "pdfview") &&
-        (url.startsWith("blob:file:///") ||
-            url.startsWith("chrome-extension://mhjfbmdgcfjbbpaeojofohoefgiehjai/") ||
-            url.startsWith(getWebServerEndpoint() + "/wave/stream-file?") ||
-            url.startsWith(getWebServerEndpoint() + "/wave/stream-file/") ||
-            url.startsWith(getWebServerEndpoint() + "/wave/stream-local-file?"))
-    ) {
-        // allowed
-        return;
-    }
-    if (event.frame.name != null && event.frame.name.startsWith("tsunami:")) {
-        // Parse port from frame name: tsunami:[port]:[blockid]
-        const nameParts = event.frame.name.split(":");
-        const expectedPort = nameParts.length >= 2 ? nameParts[1] : null;
-
-        try {
-            const tsunamiUrl = new URL(url);
-            if (
-                tsunamiUrl.protocol === "http:" &&
-                tsunamiUrl.hostname === "localhost" &&
-                expectedPort &&
-                tsunamiUrl.port === expectedPort
-            ) {
-                // allowed
-                return;
-            }
-            // If navigation is not to expected port, open externally
+    // Accessing event.frame on an already-disposed frame throws in Electron
+    // ("Render frame was disposed..."). That used to crash the whole app on
+    // dev-mode reloads — never let a frame-navigation guard take down the app.
+    try {
+        if (!event.frame?.parent) {
+            // only use this handler to process iframe events (non-iframe events go to shNavHandler)
+            return;
+        }
+        const url = event.url;
+        console.log(`frame-navigation url=${url} frame=${event.frame.name}`);
+        if (event.frame.name == "webview") {
+            // "webview" links always open in new window
+            // this will *not* effect the initial load because srcdoc does not count as an electron navigation
+            console.log("open external, frameNav", url);
             event.preventDefault();
             electron.shell.openExternal(url);
             return;
-        } catch (e) {
-            // Invalid URL, fall through to prevent navigation
         }
+        if (
+            frameOrAncestorHasName(event.frame, "pdfview") &&
+            (url.startsWith("blob:file:///") ||
+                url.startsWith("chrome-extension://mhjfbmdgcfjbbpaeojofohoefgiehjai/") ||
+                url.startsWith(getWebServerEndpoint() + "/wave/stream-file?") ||
+                url.startsWith(getWebServerEndpoint() + "/wave/stream-file/") ||
+                url.startsWith(getWebServerEndpoint() + "/wave/stream-local-file?"))
+        ) {
+            // allowed
+            return;
+        }
+        if (event.frame.name != null && event.frame.name.startsWith("tsunami:")) {
+            // Parse port from frame name: tsunami:[port]:[blockid]
+            const nameParts = event.frame.name.split(":");
+            const expectedPort = nameParts.length >= 2 ? nameParts[1] : null;
+
+            try {
+                const tsunamiUrl = new URL(url);
+                if (
+                    tsunamiUrl.protocol === "http:" &&
+                    tsunamiUrl.hostname === "localhost" &&
+                    expectedPort &&
+                    tsunamiUrl.port === expectedPort
+                ) {
+                    // allowed
+                    return;
+                }
+                // If navigation is not to expected port, open externally
+                event.preventDefault();
+                electron.shell.openExternal(url);
+                return;
+            } catch (e) {
+                // Invalid URL, fall through to prevent navigation
+            }
+        }
+        event.preventDefault();
+        console.log("frame navigation canceled", event.frame.name, url);
+    } catch (e) {
+        console.log("shFrameNavHandler error (ignored):", e);
     }
-    event.preventDefault();
-    console.log("frame navigation canceled", event.frame.name, url);
 }
 
 function isWindowFullyVisible(bounds: electron.Rectangle): boolean {

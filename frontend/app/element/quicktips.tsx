@@ -156,10 +156,6 @@ const QuickTips = () => {
                             <span className="text-[15px]">New Terminal Block</span>
                             <KeyBinding keyDecl="Cmd:n" />
                         </div>
-                        <div className="flex flex-col gap-0.5 p-2 rounded-md hover:bg-white/5 transition-colors">
-                            <span className="text-[15px]">Open Wave AI Panel</span>
-                            <KeyBinding keyDecl="Cmd:Shift:a" />
-                        </div>
                     </div>
 
                     <div className="flex flex-col gap-1.5">
@@ -191,10 +187,6 @@ const QuickTips = () => {
                         <div className="flex flex-col gap-0.5 p-2 rounded-md hover:bg-white/5 transition-colors">
                             <span className="text-[15px]">Focus Nth Block</span>
                             <KeyBinding keyDecl="Ctrl:Shift:Digit" />
-                        </div>
-                        <div className="flex flex-col gap-0.5 p-2 rounded-md hover:bg-white/5 transition-colors">
-                            <span className="text-[15px]">Focus Wave AI</span>
-                            <KeyBinding keyDecl="Ctrl:Shift:0" />
                         </div>
                     </div>
 
@@ -284,54 +276,28 @@ const QuickTips = () => {
                 <div className="grid grid-cols-1 @sm:grid-cols-2 gap-2">
                     <div className="flex items-center gap-3 p-3 rounded-md bg-black/20 hover:bg-black/30 transition-colors cursor-pointer">
                         <IconBox variant="secondary">
-                            <i className="fa-brands fa-discord fa-fw" />
+                            <i className="fa-brands fa-github fa-fw" />
                         </IconBox>
                         <a
                             target="_blank"
-                            href="https://discord.gg/XfvZ334gwU"
+                            href="https://github.com/machinebreak/orion-term"
                             rel="noopener"
                             className="hover:text-accent-400 hover:underline transition-colors font-medium"
                         >
-                            Join Our Discord
+                            Quasar on GitHub
                         </a>
                     </div>
                     <div className="flex items-center gap-3 p-3 rounded-md bg-black/20 hover:bg-black/30 transition-colors cursor-pointer">
                         <IconBox variant="secondary">
-                            <i className="fa-solid fa-sharp fa-sliders fa-fw" />
+                            <i className="fa-solid fa-sharp fa-bug fa-fw" />
                         </IconBox>
                         <a
                             target="_blank"
-                            href="https://docs.waveterm.dev/config"
+                            href="https://github.com/machinebreak/orion-term/issues"
                             rel="noopener"
                             className="hover:text-accent-400 hover:underline transition-colors font-medium"
                         >
-                            Configuration Options
-                        </a>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 rounded-md bg-black/20 hover:bg-black/30 transition-colors cursor-pointer">
-                        <IconBox variant="secondary">
-                            <i className="fa-solid fa-sharp fa-keyboard fa-fw" />
-                        </IconBox>
-                        <a
-                            target="_blank"
-                            href="https://docs.waveterm.dev/keybindings"
-                            rel="noopener"
-                            className="hover:text-accent-400 hover:underline transition-colors font-medium"
-                        >
-                            All Keybindings
-                        </a>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 rounded-md bg-black/20 hover:bg-black/30 transition-colors cursor-pointer">
-                        <IconBox variant="secondary">
-                            <i className="fa-solid fa-sharp fa-book fa-fw" />
-                        </IconBox>
-                        <a
-                            target="_blank"
-                            href="https://docs.waveterm.dev"
-                            rel="noopener"
-                            className="hover:text-accent-400 hover:underline transition-colors font-medium"
-                        >
-                            Full Documentation
+                            Report an Issue
                         </a>
                     </div>
                 </div>

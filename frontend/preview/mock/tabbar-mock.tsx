@@ -15,7 +15,7 @@ type PreviewTabEntry = {
     flagColor?: string | null;
 };
 
-function badgeBlockId(tabId: string, badgeId: string): string {
+export function badgeBlockId(tabId: string, badgeId: string): string {
     return `${tabId}-badge-${badgeId}`;
 }
 

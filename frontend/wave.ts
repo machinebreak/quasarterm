@@ -13,6 +13,7 @@ import {
     registerGlobalKeys,
 } from "@/app/store/keymodel";
 import { modalsModel } from "@/app/store/modalmodel";
+import { WorkspaceService } from "@/app/store/services";
 import { RpcApi } from "@/app/store/wshclientapi";
 import { makeBuilderRouteId, makeTabRouteId } from "@/app/store/wshrouter";
 import { initWshrpc, TabRpcClient } from "@/app/store/wshrpcutil";
@@ -33,11 +34,12 @@ import * as WOS from "@/store/wos";
 import { loadFonts } from "@/util/fontutil";
 import { setKeyUtilPlatform } from "@/util/keyutil";
 import { isMacOS, setMacOSVersion } from "@/util/platformutil";
+import { fireAndForget } from "@/util/util";
 import { createElement } from "react";
 import { createRoot } from "react-dom/client";
 
 const platform = getApi().getPlatform();
-document.title = `Wave Terminal`;
+document.title = `Quasar`;
 let savedInitOpts: WaveInitOpts = null;
 
 (window as any).WOS = WOS;
@@ -113,7 +115,7 @@ async function reinitWave() {
     const initialTab = await WOS.reloadWaveObject<Tab>(WOS.makeORef("tab", savedInitOpts.tabId));
     await WOS.reloadWaveObject<LayoutState>(WOS.makeORef("layout", initialTab.layoutstate));
     reloadAllWorkspaceTabs(ws);
-    document.title = `Wave Terminal - ${initialTab.name}`; // TODO update with tab name change
+    document.title = `Quasar - ${initialTab.name}`; // TODO update with tab name change
     getApi().setWindowInitStatus("wave-ready");
     globalStore.set(atoms.reinitVersion, globalStore.get(atoms.reinitVersion) + 1);
     globalStore.set(atoms.updaterStatusAtom, getApi().getUpdaterStatus());
@@ -181,8 +183,15 @@ async function initWave(initOpts: WaveInitOpts) {
             WOS.reloadWaveObject<LayoutState>(WOS.makeORef("layout", initialTab.layoutstate)),
         ]);
         loadAllWorkspaceTabs(ws);
+        // Keep the workspace persistent across app restarts. Closing the window
+        // runs CloseWindow -> DeleteWorkspace, which deletes any workspace that
+        // is not "saved" (no name or no icon) — that used to wipe every open
+        // tab simply because the app was closed. Filling the name/icon/color
+        // defaults (same as the workspace switcher's save action) makes the
+        // close keep everything for the next launch.
+        fireAndForget(() => WorkspaceService.UpdateWorkspace(waveWindow.workspaceid, "", "", "", true));
         WOS.wpsSubscribeToObject(WOS.makeORef("workspace", waveWindow.workspaceid));
-        document.title = `Wave Terminal - ${initialTab.name}`; // TODO update with tab name change
+        document.title = `Quasar - ${initialTab.name}`; // TODO update with tab name change
     } catch (e) {
         console.error("Failed initialization error", e);
         getApi().sendLog("Error in initialization (wave.ts, loading required objects) " + e.message + "\n" + e.stack);
@@ -194,8 +203,6 @@ async function initWave(initOpts: WaveInitOpts) {
     const fullConfig = await RpcApi.GetFullConfigCommand(TabRpcClient);
     console.log("fullconfig", fullConfig);
     globalStore.set(atoms.fullConfigAtom, fullConfig);
-    const waveaiModeConfig = await RpcApi.GetWaveAIModeConfigCommand(TabRpcClient);
-    globalStore.set(atoms.waveaiModeConfigAtom, waveaiModeConfig.configs);
     console.log("Wave First Render");
     let firstRenderResolveFn: () => void = null;
     const firstRenderPromise = new Promise<void>((resolve) => {
@@ -253,7 +260,7 @@ async function initBuilder(initOpts: BuilderInitOpts) {
         console.log("Could not load saved builder appId from rtinfo:", e);
     }
 
-    document.title = appIdToUse ? `WaveApp Builder (${appIdToUse})` : "WaveApp Builder";
+    document.title = appIdToUse ? `Quasar App Builder (${appIdToUse})` : "Quasar App Builder";
 
     globalStore.set(atoms.builderAppId, appIdToUse);
 
@@ -265,8 +272,6 @@ async function initBuilder(initOpts: BuilderInitOpts) {
     const fullConfig = await RpcApi.GetFullConfigCommand(TabRpcClient);
     console.log("fullconfig", fullConfig);
     globalStore.set(atoms.fullConfigAtom, fullConfig);
-    const waveaiModeConfig = await RpcApi.GetWaveAIModeConfigCommand(TabRpcClient);
-    globalStore.set(atoms.waveaiModeConfigAtom, waveaiModeConfig.configs);
 
     console.log("Tsunami Builder First Render");
     let firstRenderResolveFn: () => void = null;

@@ -14,9 +14,7 @@ declare global {
         workspaceId: jotai.Atom<string>; // derived from window WOS object
         workspace: jotai.Atom<Workspace>; // driven from workspaceId via WOS
         fullConfigAtom: jotai.PrimitiveAtom<FullConfigType>; // driven from WOS, settings -- updated via WebSocket
-        waveaiModeConfigAtom: jotai.PrimitiveAtom<Record<string, AIModeConfigType>>; // resolved AI mode configs -- updated via WebSocket
         settingsAtom: jotai.Atom<SettingsType>; // derrived from fullConfig
-        hasCustomAIPresetsAtom: jotai.Atom<boolean>; // derived from fullConfig
         hasConfigErrors: jotai.Atom<boolean>; // derived from fullConfig
         staticTabId: jotai.Atom<string>;
         isFullScreen: jotai.PrimitiveAtom<boolean>;
@@ -28,7 +26,6 @@ declare global {
         modalOpen: jotai.PrimitiveAtom<boolean>;
         allConnStatus: jotai.Atom<ConnStatus[]>;
         reinitVersion: jotai.PrimitiveAtom<number>;
-        waveAIRateLimitInfoAtom: jotai.PrimitiveAtom<RateLimitInfo>;
     };
 
     type ThrottledValueAtom<T> = jotai.WritableAtom<T, [update: jotai.SetStateAction<T>], void>;
@@ -115,6 +112,7 @@ declare global {
         switchWorkspace: (workspaceId: string) => void; // switch-workspace
         deleteWorkspace: (workspaceId: string) => void; // delete-workspace
         setActiveTab: (tabId: string) => void; // set-active-tab
+        focusWindow: () => void; // focus-window
         createTab: () => void; // create-tab
         closeTab: (workspaceId: string, tabId: string, confirmClose: boolean) => Promise<boolean>; // close-tab
         setWindowInitStatus: (status: "ready" | "wave-ready") => void; // set-window-init-status
@@ -126,7 +124,6 @@ declare global {
         captureScreenshot(rect: Electron.Rectangle): Promise<string>; // capture-screenshot
         setKeyboardChordMode: () => void; // set-keyboard-chord-mode
         clearWebviewStorage: (webContentsId: number) => Promise<void>; // clear-webview-storage
-        setWaveAIOpen: (isOpen: boolean) => void; // set-waveai-open
         closeBuilderWindow: () => void; // close-builder-window
         incrementTermCommands: (opts?: { isRemote?: boolean; isWsl?: boolean; isDurable?: boolean }) => void; // increment-term-commands
         nativePaste: () => void; // native-paste
@@ -135,6 +132,12 @@ declare global {
         doRefresh: () => void; // do-refresh
         getPathForFile: (file: File) => string; // webUtils.getPathForFile
         saveTextFile: (fileName: string, content: string) => Promise<boolean>; // save-text-file
+        openTextFile: (opts?: {
+            title?: string;
+            extensions?: string[];
+        }) => Promise<{ fileName: string; content: string }>; // open-text-file
+        openDirectoryDialog: (opts?: { title?: string }) => Promise<string>; // open-directory
+        importBackgroundImage: (opts?: { title?: string }) => Promise<string>; // import-bg-image (copies to <configdir>/backgrounds)
         setIsActive: () => Promise<void>; // set-is-active
     };
 
@@ -464,28 +467,6 @@ declare global {
         closeAction?: () => void;
         showDismiss?: boolean;
     };
-
-    type AIMessage = {
-        messageid: string;
-        parts: AIMessagePart[];
-    };
-
-    type AIMessagePart =
-        | {
-              type: "text";
-              text: string;
-          }
-        | {
-              type: "file";
-              mimetype: string; // required
-              filename?: string;
-              data?: string; // base64 encoded data
-              url?: string;
-              size?: number;
-              previewurl?: string;
-          };
-
-    type AIModeConfigWithMode = { mode: string } & AIModeConfigType;
 }
 
 export {};

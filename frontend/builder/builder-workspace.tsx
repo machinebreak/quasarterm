@@ -1,7 +1,6 @@
 // Copyright 2025, Command Line Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-import { AIPanel } from "@/app/aipanel/aipanel";
 import { RpcApi } from "@/app/store/wshclientapi";
 import { TabRpcClient } from "@/app/store/wshrpcutil";
 import { BuilderAppPanel } from "@/builder/builder-apppanel";
@@ -15,7 +14,6 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { debounce } from "throttle-debounce";
 
 const DefaultLayoutPercentages = {
-    chat: 50,
     app: 80,
     build: 20,
 };
@@ -71,15 +69,6 @@ const BuilderWorkspace = memo(() => {
         [builderId]
     );
 
-    const handleHorizontalLayout = useCallback(
-        (sizes: number[]) => {
-            const newLayout = { ...layout, chat: sizes[0] };
-            setLayout(newLayout);
-            saveLayout(newLayout);
-        },
-        [layout, saveLayout]
-    );
-
     const handleVerticalLayout = useCallback(
         (sizes: number[]) => {
             const newLayout = { ...layout, app: sizes[0], build: sizes[1] };
@@ -95,12 +84,8 @@ const BuilderWorkspace = memo(() => {
 
     return (
         <div className="flex-1 overflow-hidden">
-            <PanelGroup direction="horizontal" onLayout={handleHorizontalLayout}>
-                <Panel defaultSize={layout.chat} minSize={20}>
-                    <AIPanel roundTopLeft={false} />
-                </Panel>
-                <PanelResizeHandle className="w-0.5 bg-transparent hover:bg-gray-500/20 transition-colors" />
-                <Panel defaultSize={100 - layout.chat} minSize={20}>
+            <PanelGroup direction="vertical" onLayout={handleVerticalLayout}>
+                <Panel defaultSize={layout.app} minSize={20}>
                     <div
                         className={cn(
                             "flex flex-col relative h-full",
@@ -110,21 +95,12 @@ const BuilderWorkspace = memo(() => {
                             borderBottomRightRadius: 8,
                         }}
                     >
-                        <PanelGroup direction="vertical" onLayout={handleVerticalLayout}>
-                            <Panel defaultSize={layout.app} minSize={20}>
-                                <BuilderAppPanel />
-                            </Panel>
-                            <PanelResizeHandle className="h-0.5 bg-transparent hover:bg-gray-500/20 transition-colors" />
-                            <Panel
-                                defaultSize={layout.build}
-                                minSize={20}
-                                maxSize={50}
-                                style={{ borderBottomRightRadius: 8 }}
-                            >
-                                <BuilderBuildPanel />
-                            </Panel>
-                        </PanelGroup>
+                        <BuilderAppPanel />
                     </div>
+                </Panel>
+                <PanelResizeHandle className="h-0.5 bg-transparent hover:bg-gray-500/20 transition-colors" />
+                <Panel defaultSize={layout.build} minSize={20} maxSize={50} style={{ borderBottomRightRadius: 8 }}>
+                    <BuilderBuildPanel />
                 </Panel>
             </PanelGroup>
         </div>

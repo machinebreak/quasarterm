@@ -1,38 +1,12 @@
 // Copyright 2025, Command Line Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-import { WaveAIModel } from "@/app/aipanel/waveai-model";
-import { ContextMenuModel } from "@/app/store/contextmenu";
 import { globalStore } from "@/app/store/jotaiStore";
 import { BuilderAppPanelModel } from "@/builder/store/builder-apppanel-model";
 import { BuilderBuildPanelModel } from "@/builder/store/builder-buildpanel-model";
 import { useAtomValue } from "jotai";
 import { memo, useCallback, useEffect, useRef } from "react";
 import { debounce } from "throttle-debounce";
-
-function handleBuildPanelContextMenu(e: React.MouseEvent, selectedText: string): void {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (!selectedText) {
-        return;
-    }
-
-    const menu: ContextMenuItem[] = [
-        { role: "copy" },
-        { type: "separator" },
-        {
-            label: "Add to Context",
-            click: () => {
-                const model = WaveAIModel.getInstance();
-                const formattedText = `from builder output:\n\`\`\`\n${selectedText}\n\`\`\``;
-                model.appendText(formattedText, true);
-                model.focusInput();
-            },
-        },
-    ];
-    ContextMenuModel.getInstance().showContextMenu(menu, e);
-}
 
 const BuilderBuildPanel = memo(() => {
     const model = BuilderBuildPanelModel.getInstance();
@@ -68,12 +42,6 @@ const BuilderBuildPanel = memo(() => {
         debouncedCopyOnSelect();
     }, [debouncedCopyOnSelect]);
 
-    const handleContextMenu = useCallback((e: React.MouseEvent) => {
-        const selection = window.getSelection();
-        const selectedText = selection ? selection.toString() : "";
-        handleBuildPanelContextMenu(e, selectedText);
-    }, []);
-
     const handleDebugToggle = useCallback(() => {
         globalStore.set(model.showDebug, !showDebug);
     }, [model, showDebug]);
@@ -81,21 +49,6 @@ const BuilderBuildPanel = memo(() => {
     const handleRestart = useCallback(() => {
         BuilderAppPanelModel.getInstance().restartBuilder();
     }, []);
-
-    const handleSendToAI = useCallback(() => {
-        const currentShowDebug = globalStore.get(model.showDebug);
-        const currentOutputLines = globalStore.get(model.outputLines);
-        const filtered = currentShowDebug
-            ? currentOutputLines
-            : currentOutputLines.filter((line) => !line.startsWith("[debug]") && line.trim().length > 0);
-
-        const linesToSend = filtered.slice(-200);
-        const text = linesToSend.join("\n");
-        const aiModel = WaveAIModel.getInstance();
-        const formattedText = `from builder output:\n\`\`\`\n${text}\n\`\`\`\n`;
-        aiModel.appendText(formattedText, true, { scrollToBottom: true });
-        aiModel.focusInput();
-    }, [model]);
 
     const filteredLines = showDebug
         ? outputLines
@@ -117,12 +70,6 @@ const BuilderBuildPanel = memo(() => {
                     </label>
                     <button
                         className="px-3 py-1 text-sm font-medium rounded transition-colors bg-accent/80 text-white hover:bg-accent cursor-pointer"
-                        onClick={handleSendToAI}
-                    >
-                        Send Output to AI
-                    </button>
-                    <button
-                        className="px-3 py-1 text-sm font-medium rounded transition-colors bg-accent/80 text-white hover:bg-accent cursor-pointer"
                         onClick={handleRestart}
                     >
                         Restart App
@@ -134,7 +81,6 @@ const BuilderBuildPanel = memo(() => {
                     ref={preRef}
                     className="font-mono text-xs text-gray-100 whitespace-pre"
                     onMouseUp={handleMouseUp}
-                    onContextMenu={handleContextMenu}
                 >
                     {/* this comment fixes JSX blank line in pre tag */}
                     {filteredLines.length === 0 ? (
