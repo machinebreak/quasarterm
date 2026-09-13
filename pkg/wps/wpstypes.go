@@ -28,12 +28,13 @@ const (
 	Event_RouteDown           = "route:down"           // type: none
 	Event_RouteUp             = "route:up"             // type: none
 	Event_WorkspaceUpdate     = "workspace:update"     // type: none
-	Event_WaveAIRateLimit     = "waveai:ratelimit"     // type: *uctypes.RateLimitInfo
 	Event_WaveAppAppGoUpdated = "waveapp:appgoupdated" // type: none
 	Event_TsunamiUpdateMeta   = "tsunami:updatemeta"   // type: wshrpc.AppMeta
-	Event_AIModeConfig        = "waveai:modeconfig"    // type: wconfig.AIModeConfigUpdate
 	Event_BlockJobStatus      = "block:jobstatus"      // type: wshrpc.BlockJobStatusData
 	Event_Badge               = "badge"                // type: baseds.BadgeEvent
+	Event_AccountsUpdate      = "accounts:update"      // type: []accounts.Account
+	Event_AccountSwitch       = "accounts:switched"    // type: accounts.SwitchEvent
+	Event_QuotaAlert          = "accounts:quotaalert"  // type: accounts.QuotaAlertEvent
 )
 
 var AllEvents []string = []string{
@@ -50,12 +51,13 @@ var AllEvents []string = []string{
 	Event_RouteDown,
 	Event_RouteUp,
 	Event_WorkspaceUpdate,
-	Event_WaveAIRateLimit,
 	Event_WaveAppAppGoUpdated,
 	Event_TsunamiUpdateMeta,
-	Event_AIModeConfig,
 	Event_BlockJobStatus,
 	Event_Badge,
+	Event_AccountsUpdate,
+	Event_AccountSwitch,
+	Event_QuotaAlert,
 }
 
 type WaveEvent struct {

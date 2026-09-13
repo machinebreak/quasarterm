@@ -9,8 +9,8 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/wavetermdev/waveterm/pkg/aiusechat/uctypes"
 	"github.com/wavetermdev/waveterm/pkg/baseds"
+	"github.com/wavetermdev/waveterm/pkg/accounts"
 	"github.com/wavetermdev/waveterm/pkg/blockcontroller"
 	"github.com/wavetermdev/waveterm/pkg/userinput"
 	"github.com/wavetermdev/waveterm/pkg/waveobj"
@@ -35,12 +35,13 @@ var WaveEventDataTypes = map[string]reflect.Type{
 	wps.Event_RouteDown:           nil,
 	wps.Event_RouteUp:             nil,
 	wps.Event_WorkspaceUpdate:     nil,
-	wps.Event_WaveAIRateLimit:     reflect.TypeOf((*uctypes.RateLimitInfo)(nil)),
 	wps.Event_WaveAppAppGoUpdated: nil,
 	wps.Event_TsunamiUpdateMeta:   reflect.TypeOf(wshrpc.AppMeta{}),
-	wps.Event_AIModeConfig:        reflect.TypeOf(wconfig.AIModeConfigUpdate{}),
 	wps.Event_BlockJobStatus:      reflect.TypeOf(wshrpc.BlockJobStatusData{}),
 	wps.Event_Badge:               reflect.TypeOf(baseds.BadgeEvent{}),
+	wps.Event_AccountsUpdate:      reflect.TypeOf([]accounts.Account{}),
+	wps.Event_AccountSwitch:       reflect.TypeOf(accounts.SwitchEvent{}),
+	wps.Event_QuotaAlert:          reflect.TypeOf(accounts.QuotaAlertEvent{}),
 }
 
 func getWaveEventDataTSType(eventName string, tsTypesMap map[reflect.Type]string) string {

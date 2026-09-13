@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 
 	"github.com/google/uuid"
-	"github.com/wavetermdev/waveterm/pkg/aiusechat/uctypes"
+	"github.com/wavetermdev/waveterm/pkg/accounts"
 	"github.com/wavetermdev/waveterm/pkg/baseds"
 	"github.com/wavetermdev/waveterm/pkg/telemetry/telemetrydata"
 	"github.com/wavetermdev/waveterm/pkg/vdom"
@@ -77,7 +77,6 @@ type WshRpcInterface interface {
 	SetConfigCommand(ctx context.Context, data MetaSettingsType) error
 	SetConnectionsConfigCommand(ctx context.Context, data ConnConfigRequest) error
 	GetFullConfigCommand(ctx context.Context) (wconfig.FullConfigType, error)
-	GetWaveAIModeConfigCommand(ctx context.Context) (wconfig.AIModeConfigUpdate, error)
 	BlockInfoCommand(ctx context.Context, blockId string) (*BlockInfoData, error)
 	DebugTermCommand(ctx context.Context, data CommandDebugTermData) (*CommandDebugTermRtnData, error)
 	BlocksListCommand(ctx context.Context, data BlocksListRequest) ([]BlocksListEntry, error)
@@ -90,7 +89,6 @@ type WshRpcInterface interface {
 	GetAllVarsCommand(ctx context.Context, data CommandVarData) ([]CommandVarResponseData, error)
 	SetVarCommand(ctx context.Context, data CommandVarData) error
 	PathCommand(ctx context.Context, data PathCommandData) (string, error)
-	SendTelemetryCommand(ctx context.Context) error
 	FetchSuggestionsCommand(ctx context.Context, data FetchSuggestionsData) (*FetchSuggestionsResponse, error)
 	DisposeSuggestionsCommand(ctx context.Context, widgetId string) error
 	GetTabCommand(ctx context.Context, tabId string) (*waveobj.Tab, error)
@@ -145,21 +143,46 @@ type WshRpcInterface interface {
 	SetSecretsCommand(ctx context.Context, secrets map[string]*string) error
 	GetSecretsLinuxStorageBackendCommand(ctx context.Context) (string, error)
 
+	// accounts
+	ListAccountProvidersCommand(ctx context.Context) ([]accounts.ProviderInfo, error)
+	ListAccountsCommand(ctx context.Context, data CommandListAccountsData) ([]accounts.Account, error)
+	ImportCurrentAccountCommand(ctx context.Context, provider string) (*accounts.Account, error)
+	SwitchAccountCommand(ctx context.Context, data CommandSwitchAccountData) error
+	SwitchAccountAndResumeCommand(ctx context.Context, data CommandSwitchAccountData) error
+	RefreshAccountQuotaCommand(ctx context.Context, data CommandRefreshAccountQuotaData) (*accounts.Account, error)
+	DeleteAccountCommand(ctx context.Context, data CommandDeleteAccountData) error
+	SetAccountLabelCommand(ctx context.Context, data CommandSetAccountLabelData) error
+	SetAccountTagsCommand(ctx context.Context, data CommandSetAccountTagsData) error
+	ExportAccountCommand(ctx context.Context, data CommandExportAccountData) (string, error)
+	GetAccountAutoSwitchCommand(ctx context.Context, provider string) (bool, error)
+	SetAccountAutoSwitchCommand(ctx context.Context, data CommandSetAccountAutoSwitchData) error
+	ExportAccountsCommand(ctx context.Context) (string, error)
+	ImportAccountsCommand(ctx context.Context, data string) (int, error)
+	StartAccountLoginCommand(ctx context.Context, provider string) (*accounts.LoginStart, error)
+	PollAccountLoginCommand(ctx context.Context, sessionID string) (*accounts.Account, error)
+	SubmitAccountLoginCodeCommand(ctx context.Context, data CommandSubmitLoginCodeData) (*accounts.Account, error)
+	ListAccountInstancesCommand(ctx context.Context, provider string) ([]accounts.Instance, error)
+	CreateAccountInstanceCommand(ctx context.Context, data CommandCreateInstanceData) (*accounts.Instance, error)
+	UpdateAccountInstanceCommand(ctx context.Context, data CommandUpdateInstanceData) (*accounts.Instance, error)
+	DeleteAccountInstanceCommand(ctx context.Context, instanceID string) error
+	StartAccountInstanceCommand(ctx context.Context, data CommandStartInstanceData) (*accounts.Instance, error)
+	StopAccountInstanceCommand(ctx context.Context, instanceID string) (*accounts.Instance, error)
+	FocusAccountInstanceCommand(ctx context.Context, instanceID string) error
+	ListWakeTasksCommand(ctx context.Context, provider string) ([]accounts.WakeTask, error)
+	CreateWakeTaskCommand(ctx context.Context, data CommandCreateWakeTaskData) (*accounts.WakeTask, error)
+	UpdateWakeTaskCommand(ctx context.Context, data CommandUpdateWakeTaskData) (*accounts.WakeTask, error)
+	DeleteWakeTaskCommand(ctx context.Context, taskID string) error
+	RunWakeTaskCommand(ctx context.Context, taskID string) (*accounts.WakeRun, error)
+	ListWakeRunsCommand(ctx context.Context, data CommandListWakeRunsData) ([]accounts.WakeRun, error)
+	GetCodexApiStatusCommand(ctx context.Context) (accounts.LocalAPIStatus, error)
+	SetCodexApiSettingsCommand(ctx context.Context, data CommandSetCodexApiData) (accounts.LocalAPIStatus, error)
+
 	WorkspaceListCommand(ctx context.Context) ([]WorkspaceInfoData, error)
 	GetUpdateChannelCommand(ctx context.Context) (string, error)
 
 	// terminal
 	VDomCreateContextCommand(ctx context.Context, data vdom.VDomCreateContext) (*waveobj.ORef, error)
 	VDomAsyncInitiationCommand(ctx context.Context, data vdom.VDomAsyncInitiationRequest) error
-
-	// ai
-	AiSendMessageCommand(ctx context.Context, data AiMessageData) error
-	WaveAIEnableTelemetryCommand(ctx context.Context) error
-	GetWaveAIChatCommand(ctx context.Context, data CommandGetWaveAIChatData) (*uctypes.UIChat, error)
-	GetWaveAIRateLimitCommand(ctx context.Context) (*uctypes.RateLimitInfo, error)
-	WaveAIToolApproveCommand(ctx context.Context, data CommandWaveAIToolApproveData) error
-	WaveAIAddContextCommand(ctx context.Context, data CommandWaveAIAddContextData) error
-	WaveAIGetToolDiffCommand(ctx context.Context, data CommandWaveAIGetToolDiffData) (*CommandWaveAIGetToolDiffRtnData, error)
 
 	// screenshot
 	CaptureBlockScreenshotCommand(ctx context.Context, data CommandCaptureBlockScreenshotData) (string, error)
@@ -495,45 +518,101 @@ type BlocksListEntry struct {
 	Meta        waveobj.MetaMapType `json:"meta"`
 }
 
-type AiMessageData struct {
-	Message string `json:"message,omitempty"`
-}
-
-type CommandGetWaveAIChatData struct {
-	ChatId string `json:"chatid"`
-}
-
-type CommandWaveAIToolApproveData struct {
-	ToolCallId string `json:"toolcallid"`
-	Approval   string `json:"approval,omitempty"`
-}
-
-type AIAttachedFile struct {
-	Name   string `json:"name"`
-	Type   string `json:"type"`
-	Size   int    `json:"size"`
-	Data64 string `json:"data64"`
-}
-
-type CommandWaveAIAddContextData struct {
-	Files   []AIAttachedFile `json:"files,omitempty"`
-	Text    string           `json:"text,omitempty"`
-	Submit  bool             `json:"submit,omitempty"`
-	NewChat bool             `json:"newchat,omitempty"`
-}
-
-type CommandWaveAIGetToolDiffData struct {
-	ChatId     string `json:"chatid"`
-	ToolCallId string `json:"toolcallid"`
-}
-
-type CommandWaveAIGetToolDiffRtnData struct {
-	OriginalContents64 string `json:"originalcontents64"`
-	ModifiedContents64 string `json:"modifiedcontents64"`
-}
-
 type CommandCaptureBlockScreenshotData struct {
 	BlockId string `json:"blockid"`
+}
+
+type CommandListAccountsData struct {
+	Provider string `json:"provider,omitempty"`
+}
+
+type CommandSwitchAccountData struct {
+	Provider  string `json:"provider"`
+	AccountID string `json:"accountid"`
+	BlockID   string `json:"blockid,omitempty"`
+}
+
+type CommandRefreshAccountQuotaData struct {
+	Provider  string `json:"provider"`
+	AccountID string `json:"accountid"`
+}
+
+type CommandDeleteAccountData struct {
+	Provider  string `json:"provider"`
+	AccountID string `json:"accountid"`
+}
+
+type CommandSetAccountLabelData struct {
+	Provider  string `json:"provider"`
+	AccountID string `json:"accountid"`
+	Label     string `json:"label"`
+}
+
+type CommandSetAccountTagsData struct {
+	Provider  string   `json:"provider"`
+	AccountID string   `json:"accountid"`
+	Tags      []string `json:"tags,omitempty"`
+}
+
+type CommandExportAccountData struct {
+	Provider       string `json:"provider"`
+	AccountID      string `json:"accountid"`
+	IncludeSecrets bool   `json:"includesecrets,omitempty"`
+}
+
+type CommandSetAccountAutoSwitchData struct {
+	Provider string `json:"provider"`
+	Enabled  bool   `json:"enabled"`
+}
+
+type CommandSubmitLoginCodeData struct {
+	SessionID string `json:"sessionid"`
+	Code      string `json:"code"`
+}
+
+type CommandCreateInstanceData struct {
+	Provider  string   `json:"provider"`
+	AccountID string   `json:"accountid"`
+	Name      string   `json:"name,omitempty"`
+	Dir       string   `json:"dir,omitempty"`
+	Args      []string `json:"args,omitempty"`
+}
+
+type CommandUpdateInstanceData struct {
+	InstanceID string   `json:"instanceid"`
+	Name       string   `json:"name,omitempty"`
+	Dir        string   `json:"dir,omitempty"`
+	Args       []string `json:"args,omitempty"`
+}
+
+type CommandStartInstanceData struct {
+	InstanceID string `json:"instanceid"`
+	TabID      string `json:"tabid,omitempty"`
+}
+
+type CommandCreateWakeTaskData struct {
+	Provider        string `json:"provider"`
+	AccountID       string `json:"accountid"`
+	IntervalMinutes int    `json:"intervalminutes"`
+	Model           string `json:"model,omitempty"`
+}
+
+type CommandUpdateWakeTaskData struct {
+	TaskID          string `json:"taskid"`
+	Enabled         bool   `json:"enabled"`
+	IntervalMinutes int    `json:"intervalminutes"`
+	Model           string `json:"model,omitempty"`
+}
+
+type CommandListWakeRunsData struct {
+	TaskID string `json:"taskid"`
+	Limit  int    `json:"limit,omitempty"`
+}
+
+type CommandSetCodexApiData struct {
+	Enabled bool   `json:"enabled"`
+	Port    int    `json:"port"`
+	APIKey  string `json:"apikey,omitempty"`
 }
 
 type CommandVarData struct {
@@ -578,8 +657,6 @@ type ActivityUpdate struct {
 	FgMinutes           int                   `json:"fgminutes,omitempty"`
 	ActiveMinutes       int                   `json:"activeminutes,omitempty"`
 	OpenMinutes         int                   `json:"openminutes,omitempty"`
-	WaveAIFgMinutes     int                   `json:"waveaifgminutes,omitempty"`
-	WaveAIActiveMinutes int                   `json:"waveaiactiveminutes,omitempty"`
 	NumTabs             int                   `json:"numtabs,omitempty"`
 	NewTab              int                   `json:"newtab,omitempty"`
 	NumBlocks           int                   `json:"numblocks,omitempty"`
@@ -591,7 +668,6 @@ type ActivityUpdate struct {
 	NumMagnify          int                   `json:"nummagnify,omitempty"`
 	TermCommandsRun     int                   `json:"termcommandsrun,omitempty"`
 	NumPanics           int                   `json:"numpanics,omitempty"`
-	NumAIReqs           int                   `json:"numaireqs,omitempty"`
 	Startup             int                   `json:"startup,omitempty"`
 	Shutdown            int                   `json:"shutdown,omitempty"`
 	SetTabTheme         int                   `json:"settabtheme,omitempty"`

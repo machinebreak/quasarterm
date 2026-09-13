@@ -105,12 +105,15 @@ type MetaTSType struct {
 	LayoutVTabBarWidth      int  `json:"layout:vtabbarwidth,omitempty"`
 	LayoutWidgetsVisible    *bool `json:"layout:widgetsvisible,omitempty"`
 
-	// for tabs+waveai
-	WaveAiPanelOpen     bool   `json:"waveai:panelopen,omitempty"`
-	WaveAiPanelWidth    int    `json:"waveai:panelwidth,omitempty"`
-	WaveAiModel         string `json:"waveai:model,omitempty"`
-	WaveAiChatId        string `json:"waveai:chatid,omitempty"`
-	WaveAiWidgetContext *bool  `json:"waveai:widgetcontext,omitempty"` // default is true
+	// canvas mode window geometry (per block)
+	CanvasX *float64 `json:"canvas:x,omitempty"`
+	CanvasY *float64 `json:"canvas:y,omitempty"`
+	CanvasW *float64 `json:"canvas:w,omitempty"`
+	CanvasH *float64 `json:"canvas:h,omitempty"`
+
+	// for accounts
+	AccountProvider   string `json:"account:provider,omitempty"`
+	AccountAutoSwitch *bool  `json:"account:autoswitch,omitempty"`
 
 	TermClear               bool     `json:"term:*,omitempty"`
 	TermFontSize            int      `json:"term:fontsize,omitempty"`

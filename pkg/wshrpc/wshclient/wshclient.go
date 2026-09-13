@@ -6,7 +6,7 @@
 package wshclient
 
 import (
-	"github.com/wavetermdev/waveterm/pkg/aiusechat/uctypes"
+	"github.com/wavetermdev/waveterm/pkg/accounts"
 	"github.com/wavetermdev/waveterm/pkg/baseds"
 	"github.com/wavetermdev/waveterm/pkg/telemetry/telemetrydata"
 	"github.com/wavetermdev/waveterm/pkg/vdom"
@@ -20,12 +20,6 @@ import (
 // command "activity", wshserver.ActivityCommand
 func ActivityCommand(w *wshutil.WshRpc, data wshrpc.ActivityUpdate, opts *wshrpc.RpcOpts) error {
 	_, err := sendRpcRequestCallHelper[any](w, "activity", data, opts)
-	return err
-}
-
-// command "aisendmessage", wshserver.AiSendMessageCommand
-func AiSendMessageCommand(w *wshutil.WshRpc, data wshrpc.AiMessageData, opts *wshrpc.RpcOpts) error {
-	_, err := sendRpcRequestCallHelper[any](w, "aisendmessage", data, opts)
 	return err
 }
 
@@ -179,6 +173,12 @@ func ControllerResyncCommand(w *wshutil.WshRpc, data wshrpc.CommandControllerRes
 	return err
 }
 
+// command "createaccountinstance", wshserver.CreateAccountInstanceCommand
+func CreateAccountInstanceCommand(w *wshutil.WshRpc, data wshrpc.CommandCreateInstanceData, opts *wshrpc.RpcOpts) (*accounts.Instance, error) {
+	resp, err := sendRpcRequestCallHelper[*accounts.Instance](w, "createaccountinstance", data, opts)
+	return resp, err
+}
+
 // command "createblock", wshserver.CreateBlockCommand
 func CreateBlockCommand(w *wshutil.WshRpc, data wshrpc.CommandCreateBlockData, opts *wshrpc.RpcOpts) (waveobj.ORef, error) {
 	resp, err := sendRpcRequestCallHelper[waveobj.ORef](w, "createblock", data, opts)
@@ -191,10 +191,28 @@ func CreateSubBlockCommand(w *wshutil.WshRpc, data wshrpc.CommandCreateSubBlockD
 	return resp, err
 }
 
+// command "createwaketask", wshserver.CreateWakeTaskCommand
+func CreateWakeTaskCommand(w *wshutil.WshRpc, data wshrpc.CommandCreateWakeTaskData, opts *wshrpc.RpcOpts) (*accounts.WakeTask, error) {
+	resp, err := sendRpcRequestCallHelper[*accounts.WakeTask](w, "createwaketask", data, opts)
+	return resp, err
+}
+
 // command "debugterm", wshserver.DebugTermCommand
 func DebugTermCommand(w *wshutil.WshRpc, data wshrpc.CommandDebugTermData, opts *wshrpc.RpcOpts) (*wshrpc.CommandDebugTermRtnData, error) {
 	resp, err := sendRpcRequestCallHelper[*wshrpc.CommandDebugTermRtnData](w, "debugterm", data, opts)
 	return resp, err
+}
+
+// command "deleteaccount", wshserver.DeleteAccountCommand
+func DeleteAccountCommand(w *wshutil.WshRpc, data wshrpc.CommandDeleteAccountData, opts *wshrpc.RpcOpts) error {
+	_, err := sendRpcRequestCallHelper[any](w, "deleteaccount", data, opts)
+	return err
+}
+
+// command "deleteaccountinstance", wshserver.DeleteAccountInstanceCommand
+func DeleteAccountInstanceCommand(w *wshutil.WshRpc, data string, opts *wshrpc.RpcOpts) error {
+	_, err := sendRpcRequestCallHelper[any](w, "deleteaccountinstance", data, opts)
+	return err
 }
 
 // command "deleteappfile", wshserver.DeleteAppFileCommand
@@ -218,6 +236,12 @@ func DeleteBuilderCommand(w *wshutil.WshRpc, data string, opts *wshrpc.RpcOpts) 
 // command "deletesubblock", wshserver.DeleteSubBlockCommand
 func DeleteSubBlockCommand(w *wshutil.WshRpc, data wshrpc.CommandDeleteBlockData, opts *wshrpc.RpcOpts) error {
 	_, err := sendRpcRequestCallHelper[any](w, "deletesubblock", data, opts)
+	return err
+}
+
+// command "deletewaketask", wshserver.DeleteWakeTaskCommand
+func DeleteWakeTaskCommand(w *wshutil.WshRpc, data string, opts *wshrpc.RpcOpts) error {
+	_, err := sendRpcRequestCallHelper[any](w, "deletewaketask", data, opts)
 	return err
 }
 
@@ -291,6 +315,18 @@ func EventUnsubCommand(w *wshutil.WshRpc, data string, opts *wshrpc.RpcOpts) err
 func EventUnsubAllCommand(w *wshutil.WshRpc, opts *wshrpc.RpcOpts) error {
 	_, err := sendRpcRequestCallHelper[any](w, "eventunsuball", nil, opts)
 	return err
+}
+
+// command "exportaccount", wshserver.ExportAccountCommand
+func ExportAccountCommand(w *wshutil.WshRpc, data wshrpc.CommandExportAccountData, opts *wshrpc.RpcOpts) (string, error) {
+	resp, err := sendRpcRequestCallHelper[string](w, "exportaccount", data, opts)
+	return resp, err
+}
+
+// command "exportaccounts", wshserver.ExportAccountsCommand
+func ExportAccountsCommand(w *wshutil.WshRpc, opts *wshrpc.RpcOpts) (string, error) {
+	resp, err := sendRpcRequestCallHelper[string](w, "exportaccounts", nil, opts)
+	return resp, err
 }
 
 // command "fetchsuggestions", wshserver.FetchSuggestionsCommand
@@ -388,10 +424,22 @@ func FindGitBashCommand(w *wshutil.WshRpc, data bool, opts *wshrpc.RpcOpts) (str
 	return resp, err
 }
 
+// command "focusaccountinstance", wshserver.FocusAccountInstanceCommand
+func FocusAccountInstanceCommand(w *wshutil.WshRpc, data string, opts *wshrpc.RpcOpts) error {
+	_, err := sendRpcRequestCallHelper[any](w, "focusaccountinstance", data, opts)
+	return err
+}
+
 // command "focuswindow", wshserver.FocusWindowCommand
 func FocusWindowCommand(w *wshutil.WshRpc, data string, opts *wshrpc.RpcOpts) error {
 	_, err := sendRpcRequestCallHelper[any](w, "focuswindow", data, opts)
 	return err
+}
+
+// command "getaccountautoswitch", wshserver.GetAccountAutoSwitchCommand
+func GetAccountAutoSwitchCommand(w *wshutil.WshRpc, data string, opts *wshrpc.RpcOpts) (bool, error) {
+	resp, err := sendRpcRequestCallHelper[bool](w, "getaccountautoswitch", data, opts)
+	return resp, err
 }
 
 // command "getallbadges", wshserver.GetAllBadgesCommand
@@ -415,6 +463,12 @@ func GetBuilderOutputCommand(w *wshutil.WshRpc, data string, opts *wshrpc.RpcOpt
 // command "getbuilderstatus", wshserver.GetBuilderStatusCommand
 func GetBuilderStatusCommand(w *wshutil.WshRpc, data string, opts *wshrpc.RpcOpts) (*wshrpc.BuilderStatusData, error) {
 	resp, err := sendRpcRequestCallHelper[*wshrpc.BuilderStatusData](w, "getbuilderstatus", data, opts)
+	return resp, err
+}
+
+// command "getcodexapistatus", wshserver.GetCodexApiStatusCommand
+func GetCodexApiStatusCommand(w *wshutil.WshRpc, opts *wshrpc.RpcOpts) (accounts.LocalAPIStatus, error) {
+	resp, err := sendRpcRequestCallHelper[accounts.LocalAPIStatus](w, "getcodexapistatus", nil, opts)
 	return resp, err
 }
 
@@ -490,21 +544,15 @@ func GetVarCommand(w *wshutil.WshRpc, data wshrpc.CommandVarData, opts *wshrpc.R
 	return resp, err
 }
 
-// command "getwaveaichat", wshserver.GetWaveAIChatCommand
-func GetWaveAIChatCommand(w *wshutil.WshRpc, data wshrpc.CommandGetWaveAIChatData, opts *wshrpc.RpcOpts) (*uctypes.UIChat, error) {
-	resp, err := sendRpcRequestCallHelper[*uctypes.UIChat](w, "getwaveaichat", data, opts)
+// command "importaccounts", wshserver.ImportAccountsCommand
+func ImportAccountsCommand(w *wshutil.WshRpc, data string, opts *wshrpc.RpcOpts) (int, error) {
+	resp, err := sendRpcRequestCallHelper[int](w, "importaccounts", data, opts)
 	return resp, err
 }
 
-// command "getwaveaimodeconfig", wshserver.GetWaveAIModeConfigCommand
-func GetWaveAIModeConfigCommand(w *wshutil.WshRpc, opts *wshrpc.RpcOpts) (wconfig.AIModeConfigUpdate, error) {
-	resp, err := sendRpcRequestCallHelper[wconfig.AIModeConfigUpdate](w, "getwaveaimodeconfig", nil, opts)
-	return resp, err
-}
-
-// command "getwaveairatelimit", wshserver.GetWaveAIRateLimitCommand
-func GetWaveAIRateLimitCommand(w *wshutil.WshRpc, opts *wshrpc.RpcOpts) (*uctypes.RateLimitInfo, error) {
-	resp, err := sendRpcRequestCallHelper[*uctypes.RateLimitInfo](w, "getwaveairatelimit", nil, opts)
+// command "importcurrentaccount", wshserver.ImportCurrentAccountCommand
+func ImportCurrentAccountCommand(w *wshutil.WshRpc, data string, opts *wshrpc.RpcOpts) (*accounts.Account, error) {
+	resp, err := sendRpcRequestCallHelper[*accounts.Account](w, "importcurrentaccount", data, opts)
 	return resp, err
 }
 
@@ -598,6 +646,24 @@ func JobStartStreamCommand(w *wshutil.WshRpc, data wshrpc.CommandJobStartStreamD
 	return err
 }
 
+// command "listaccountinstances", wshserver.ListAccountInstancesCommand
+func ListAccountInstancesCommand(w *wshutil.WshRpc, data string, opts *wshrpc.RpcOpts) ([]accounts.Instance, error) {
+	resp, err := sendRpcRequestCallHelper[[]accounts.Instance](w, "listaccountinstances", data, opts)
+	return resp, err
+}
+
+// command "listaccountproviders", wshserver.ListAccountProvidersCommand
+func ListAccountProvidersCommand(w *wshutil.WshRpc, opts *wshrpc.RpcOpts) ([]accounts.ProviderInfo, error) {
+	resp, err := sendRpcRequestCallHelper[[]accounts.ProviderInfo](w, "listaccountproviders", nil, opts)
+	return resp, err
+}
+
+// command "listaccounts", wshserver.ListAccountsCommand
+func ListAccountsCommand(w *wshutil.WshRpc, data wshrpc.CommandListAccountsData, opts *wshrpc.RpcOpts) ([]accounts.Account, error) {
+	resp, err := sendRpcRequestCallHelper[[]accounts.Account](w, "listaccounts", data, opts)
+	return resp, err
+}
+
 // command "listallappfiles", wshserver.ListAllAppFilesCommand
 func ListAllAppFilesCommand(w *wshutil.WshRpc, data wshrpc.CommandListAllAppFilesData, opts *wshrpc.RpcOpts) (*wshrpc.CommandListAllAppFilesRtnData, error) {
 	resp, err := sendRpcRequestCallHelper[*wshrpc.CommandListAllAppFilesRtnData](w, "listallappfiles", data, opts)
@@ -613,6 +679,18 @@ func ListAllAppsCommand(w *wshutil.WshRpc, opts *wshrpc.RpcOpts) ([]wshrpc.AppIn
 // command "listalleditableapps", wshserver.ListAllEditableAppsCommand
 func ListAllEditableAppsCommand(w *wshutil.WshRpc, opts *wshrpc.RpcOpts) ([]wshrpc.AppInfo, error) {
 	resp, err := sendRpcRequestCallHelper[[]wshrpc.AppInfo](w, "listalleditableapps", nil, opts)
+	return resp, err
+}
+
+// command "listwakeruns", wshserver.ListWakeRunsCommand
+func ListWakeRunsCommand(w *wshutil.WshRpc, data wshrpc.CommandListWakeRunsData, opts *wshrpc.RpcOpts) ([]accounts.WakeRun, error) {
+	resp, err := sendRpcRequestCallHelper[[]accounts.WakeRun](w, "listwakeruns", data, opts)
+	return resp, err
+}
+
+// command "listwaketasks", wshserver.ListWakeTasksCommand
+func ListWakeTasksCommand(w *wshutil.WshRpc, data string, opts *wshrpc.RpcOpts) ([]accounts.WakeTask, error) {
+	resp, err := sendRpcRequestCallHelper[[]accounts.WakeTask](w, "listwaketasks", data, opts)
 	return resp, err
 }
 
@@ -658,6 +736,12 @@ func PathCommand(w *wshutil.WshRpc, data wshrpc.PathCommandData, opts *wshrpc.Rp
 	return resp, err
 }
 
+// command "pollaccountlogin", wshserver.PollAccountLoginCommand
+func PollAccountLoginCommand(w *wshutil.WshRpc, data string, opts *wshrpc.RpcOpts) (*accounts.Account, error) {
+	resp, err := sendRpcRequestCallHelper[*accounts.Account](w, "pollaccountlogin", data, opts)
+	return resp, err
+}
+
 // command "publishapp", wshserver.PublishAppCommand
 func PublishAppCommand(w *wshutil.WshRpc, data wshrpc.CommandPublishAppData, opts *wshrpc.RpcOpts) (*wshrpc.CommandPublishAppRtnData, error) {
 	resp, err := sendRpcRequestCallHelper[*wshrpc.CommandPublishAppRtnData](w, "publishapp", data, opts)
@@ -674,6 +758,12 @@ func ReadAppFileCommand(w *wshutil.WshRpc, data wshrpc.CommandReadAppFileData, o
 func RecordTEventCommand(w *wshutil.WshRpc, data telemetrydata.TEvent, opts *wshrpc.RpcOpts) error {
 	_, err := sendRpcRequestCallHelper[any](w, "recordtevent", data, opts)
 	return err
+}
+
+// command "refreshaccountquota", wshserver.RefreshAccountQuotaCommand
+func RefreshAccountQuotaCommand(w *wshutil.WshRpc, data wshrpc.CommandRefreshAccountQuotaData, opts *wshrpc.RpcOpts) (*accounts.Account, error) {
+	resp, err := sendRpcRequestCallHelper[*accounts.Account](w, "refreshaccountquota", data, opts)
+	return resp, err
 }
 
 // command "remotedisconnectfromjobmanager", wshserver.RemoteDisconnectFromJobManagerCommand
@@ -824,9 +914,27 @@ func RouteUnannounceCommand(w *wshutil.WshRpc, opts *wshrpc.RpcOpts) error {
 	return err
 }
 
-// command "sendtelemetry", wshserver.SendTelemetryCommand
-func SendTelemetryCommand(w *wshutil.WshRpc, opts *wshrpc.RpcOpts) error {
-	_, err := sendRpcRequestCallHelper[any](w, "sendtelemetry", nil, opts)
+// command "runwaketask", wshserver.RunWakeTaskCommand
+func RunWakeTaskCommand(w *wshutil.WshRpc, data string, opts *wshrpc.RpcOpts) (*accounts.WakeRun, error) {
+	resp, err := sendRpcRequestCallHelper[*accounts.WakeRun](w, "runwaketask", data, opts)
+	return resp, err
+}
+
+// command "setaccountautoswitch", wshserver.SetAccountAutoSwitchCommand
+func SetAccountAutoSwitchCommand(w *wshutil.WshRpc, data wshrpc.CommandSetAccountAutoSwitchData, opts *wshrpc.RpcOpts) error {
+	_, err := sendRpcRequestCallHelper[any](w, "setaccountautoswitch", data, opts)
+	return err
+}
+
+// command "setaccountlabel", wshserver.SetAccountLabelCommand
+func SetAccountLabelCommand(w *wshutil.WshRpc, data wshrpc.CommandSetAccountLabelData, opts *wshrpc.RpcOpts) error {
+	_, err := sendRpcRequestCallHelper[any](w, "setaccountlabel", data, opts)
+	return err
+}
+
+// command "setaccounttags", wshserver.SetAccountTagsCommand
+func SetAccountTagsCommand(w *wshutil.WshRpc, data wshrpc.CommandSetAccountTagsData, opts *wshrpc.RpcOpts) error {
+	_, err := sendRpcRequestCallHelper[any](w, "setaccounttags", data, opts)
 	return err
 }
 
@@ -834,6 +942,12 @@ func SendTelemetryCommand(w *wshutil.WshRpc, opts *wshrpc.RpcOpts) error {
 func SetBlockFocusCommand(w *wshutil.WshRpc, data string, opts *wshrpc.RpcOpts) error {
 	_, err := sendRpcRequestCallHelper[any](w, "setblockfocus", data, opts)
 	return err
+}
+
+// command "setcodexapisettings", wshserver.SetCodexApiSettingsCommand
+func SetCodexApiSettingsCommand(w *wshutil.WshRpc, data wshrpc.CommandSetCodexApiData, opts *wshrpc.RpcOpts) (accounts.LocalAPIStatus, error) {
+	resp, err := sendRpcRequestCallHelper[accounts.LocalAPIStatus](w, "setcodexapisettings", data, opts)
+	return resp, err
 }
 
 // command "setconfig", wshserver.SetConfigCommand
@@ -878,6 +992,18 @@ func SetVarCommand(w *wshutil.WshRpc, data wshrpc.CommandVarData, opts *wshrpc.R
 	return err
 }
 
+// command "startaccountinstance", wshserver.StartAccountInstanceCommand
+func StartAccountInstanceCommand(w *wshutil.WshRpc, data wshrpc.CommandStartInstanceData, opts *wshrpc.RpcOpts) (*accounts.Instance, error) {
+	resp, err := sendRpcRequestCallHelper[*accounts.Instance](w, "startaccountinstance", data, opts)
+	return resp, err
+}
+
+// command "startaccountlogin", wshserver.StartAccountLoginCommand
+func StartAccountLoginCommand(w *wshutil.WshRpc, data string, opts *wshrpc.RpcOpts) (*accounts.LoginStart, error) {
+	resp, err := sendRpcRequestCallHelper[*accounts.LoginStart](w, "startaccountlogin", data, opts)
+	return resp, err
+}
+
 // command "startbuilder", wshserver.StartBuilderCommand
 func StartBuilderCommand(w *wshutil.WshRpc, data wshrpc.CommandStartBuilderData, opts *wshrpc.RpcOpts) error {
 	_, err := sendRpcRequestCallHelper[any](w, "startbuilder", data, opts)
@@ -887,6 +1013,12 @@ func StartBuilderCommand(w *wshutil.WshRpc, data wshrpc.CommandStartBuilderData,
 // command "startjob", wshserver.StartJobCommand
 func StartJobCommand(w *wshutil.WshRpc, data wshrpc.CommandStartJobData, opts *wshrpc.RpcOpts) (*wshrpc.CommandStartJobRtnData, error) {
 	resp, err := sendRpcRequestCallHelper[*wshrpc.CommandStartJobRtnData](w, "startjob", data, opts)
+	return resp, err
+}
+
+// command "stopaccountinstance", wshserver.StopAccountInstanceCommand
+func StopAccountInstanceCommand(w *wshutil.WshRpc, data string, opts *wshrpc.RpcOpts) (*accounts.Instance, error) {
+	resp, err := sendRpcRequestCallHelper[*accounts.Instance](w, "stopaccountinstance", data, opts)
 	return resp, err
 }
 
@@ -918,6 +1050,24 @@ func StreamTestCommand(w *wshutil.WshRpc, opts *wshrpc.RpcOpts) chan wshrpc.Resp
 	return sendRpcRequestResponseStreamHelper[int](w, "streamtest", nil, opts)
 }
 
+// command "submitaccountlogincode", wshserver.SubmitAccountLoginCodeCommand
+func SubmitAccountLoginCodeCommand(w *wshutil.WshRpc, data wshrpc.CommandSubmitLoginCodeData, opts *wshrpc.RpcOpts) (*accounts.Account, error) {
+	resp, err := sendRpcRequestCallHelper[*accounts.Account](w, "submitaccountlogincode", data, opts)
+	return resp, err
+}
+
+// command "switchaccount", wshserver.SwitchAccountCommand
+func SwitchAccountCommand(w *wshutil.WshRpc, data wshrpc.CommandSwitchAccountData, opts *wshrpc.RpcOpts) error {
+	_, err := sendRpcRequestCallHelper[any](w, "switchaccount", data, opts)
+	return err
+}
+
+// command "switchaccountandresume", wshserver.SwitchAccountAndResumeCommand
+func SwitchAccountAndResumeCommand(w *wshutil.WshRpc, data wshrpc.CommandSwitchAccountData, opts *wshrpc.RpcOpts) error {
+	_, err := sendRpcRequestCallHelper[any](w, "switchaccountandresume", data, opts)
+	return err
+}
+
 // command "termgetscrollbacklines", wshserver.TermGetScrollbackLinesCommand
 func TermGetScrollbackLinesCommand(w *wshutil.WshRpc, data wshrpc.CommandTermGetScrollbackLinesData, opts *wshrpc.RpcOpts) (*wshrpc.CommandTermGetScrollbackLinesRtnData, error) {
 	resp, err := sendRpcRequestCallHelper[*wshrpc.CommandTermGetScrollbackLinesRtnData](w, "termgetscrollbacklines", data, opts)
@@ -936,10 +1086,22 @@ func TestMultiArgCommand(w *wshutil.WshRpc, arg1 string, arg2 int, arg3 bool, op
 	return resp, err
 }
 
+// command "updateaccountinstance", wshserver.UpdateAccountInstanceCommand
+func UpdateAccountInstanceCommand(w *wshutil.WshRpc, data wshrpc.CommandUpdateInstanceData, opts *wshrpc.RpcOpts) (*accounts.Instance, error) {
+	resp, err := sendRpcRequestCallHelper[*accounts.Instance](w, "updateaccountinstance", data, opts)
+	return resp, err
+}
+
 // command "updatetabname", wshserver.UpdateTabNameCommand
 func UpdateTabNameCommand(w *wshutil.WshRpc, arg1 string, arg2 string, opts *wshrpc.RpcOpts) error {
 	_, err := sendRpcRequestCallHelper[any](w, "updatetabname", wshrpc.MultiArg{Args: []any{arg1, arg2}}, opts)
 	return err
+}
+
+// command "updatewaketask", wshserver.UpdateWakeTaskCommand
+func UpdateWakeTaskCommand(w *wshutil.WshRpc, data wshrpc.CommandUpdateWakeTaskData, opts *wshrpc.RpcOpts) (*accounts.WakeTask, error) {
+	resp, err := sendRpcRequestCallHelper[*accounts.WakeTask](w, "updatewaketask", data, opts)
+	return resp, err
 }
 
 // command "updateworkspacetabids", wshserver.UpdateWorkspaceTabIdsCommand
@@ -974,30 +1136,6 @@ func VDomUrlRequestCommand(w *wshutil.WshRpc, data wshrpc.VDomUrlRequestData, op
 func WaitForRouteCommand(w *wshutil.WshRpc, data wshrpc.CommandWaitForRouteData, opts *wshrpc.RpcOpts) (bool, error) {
 	resp, err := sendRpcRequestCallHelper[bool](w, "waitforroute", data, opts)
 	return resp, err
-}
-
-// command "waveaiaddcontext", wshserver.WaveAIAddContextCommand
-func WaveAIAddContextCommand(w *wshutil.WshRpc, data wshrpc.CommandWaveAIAddContextData, opts *wshrpc.RpcOpts) error {
-	_, err := sendRpcRequestCallHelper[any](w, "waveaiaddcontext", data, opts)
-	return err
-}
-
-// command "waveaienabletelemetry", wshserver.WaveAIEnableTelemetryCommand
-func WaveAIEnableTelemetryCommand(w *wshutil.WshRpc, opts *wshrpc.RpcOpts) error {
-	_, err := sendRpcRequestCallHelper[any](w, "waveaienabletelemetry", nil, opts)
-	return err
-}
-
-// command "waveaigettooldiff", wshserver.WaveAIGetToolDiffCommand
-func WaveAIGetToolDiffCommand(w *wshutil.WshRpc, data wshrpc.CommandWaveAIGetToolDiffData, opts *wshrpc.RpcOpts) (*wshrpc.CommandWaveAIGetToolDiffRtnData, error) {
-	resp, err := sendRpcRequestCallHelper[*wshrpc.CommandWaveAIGetToolDiffRtnData](w, "waveaigettooldiff", data, opts)
-	return resp, err
-}
-
-// command "waveaitoolapprove", wshserver.WaveAIToolApproveCommand
-func WaveAIToolApproveCommand(w *wshutil.WshRpc, data wshrpc.CommandWaveAIToolApproveData, opts *wshrpc.RpcOpts) error {
-	_, err := sendRpcRequestCallHelper[any](w, "waveaitoolapprove", data, opts)
-	return err
 }
 
 // command "wavefilereadstream", wshserver.WaveFileReadStreamCommand

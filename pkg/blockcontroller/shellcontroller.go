@@ -16,6 +16,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/wavetermdev/waveterm/pkg/accounts"
 	"github.com/wavetermdev/waveterm/pkg/blocklogger"
 	"github.com/wavetermdev/waveterm/pkg/filestore"
 	"github.com/wavetermdev/waveterm/pkg/panichandler"
@@ -65,6 +66,9 @@ type ShellController struct {
 	// for shell/cmd
 	ShellProc    *shellexec.ShellProc
 	ShellInputCh chan *BlockInputUnion
+
+	accountOutputTail   []byte
+	accountSwitchActive bool
 }
 
 // Constructor that returns the Controller interface
@@ -157,6 +161,59 @@ func (sc *ShellController) WithLock(f func()) {
 	sc.Lock.Lock()
 	defer sc.Lock.Unlock()
 	f()
+}
+
+func (sc *ShellController) checkAccountQuotaExhaustion(data []byte) {
+	blockData := sc.getBlockData_noErr()
+	if blockData == nil {
+		return
+	}
+	provider := blockData.Meta.GetString("account:provider", "")
+	if provider == "" {
+		return
+	}
+	sc.WithLock(func() {
+		if sc.accountSwitchActive {
+			return
+		}
+		sc.accountOutputTail = append(sc.accountOutputTail, data...)
+		if len(sc.accountOutputTail) > 8192 {
+			sc.accountOutputTail = sc.accountOutputTail[len(sc.accountOutputTail)-8192:]
+		}
+	})
+	var tailCopy []byte
+	sc.WithLock(func() {
+		tailCopy = append([]byte(nil), sc.accountOutputTail...)
+	})
+	if sc.accountSwitchActive {
+		return
+	}
+	if !accounts.DetectQuotaExhaustedOutput(string(tailCopy)) {
+		return
+	}
+	sc.WithLock(func() {
+		sc.accountSwitchActive = true
+		sc.accountOutputTail = nil
+	})
+	blockId := sc.BlockId
+	_, switched := accounts.GetManager().MaybeAutoSwitch(provider, blockId, func(input []byte) {
+		sendInputUnion := &BlockInputUnion{InputData: input}
+		if err := SendInput(blockId, sendInputUnion); err != nil {
+			log.Printf("error sending account switch input: %v\n", err)
+		}
+	})
+	if !switched {
+		sc.WithLock(func() {
+			sc.accountSwitchActive = false
+		})
+		return
+	}
+	go func() {
+		time.Sleep(8 * time.Second)
+		sc.WithLock(func() {
+			sc.accountSwitchActive = false
+		})
+	}()
 }
 
 type RunShellOpts struct {
@@ -553,6 +610,7 @@ func (bc *ShellController) manageRunningShellProcess(shellProc *shellexec.ShellP
 		for {
 			nr, err := shellProc.Cmd.Read(buf)
 			if nr > 0 {
+				bc.checkAccountQuotaExhaustion(buf[:nr])
 				err := HandleAppendBlockFile(bc.BlockId, wavebase.BlockFile_Term, buf[:nr])
 				if err != nil {
 					log.Printf("error appending to blockfile: %v\n", err)

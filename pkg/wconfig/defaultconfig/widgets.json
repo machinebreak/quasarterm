@@ -50,5 +50,25 @@
                 "view": "processviewer"
             }
         }
+    },
+    "defwidget@accounts": {
+        "display:order": 0,
+        "icon": "users",
+        "label": "accounts",
+        "blockdef": {
+            "meta": {
+                "view": "accounts"
+            }
+        }
+    },
+    "defwidget@agents": {
+        "display:order": 1,
+        "icon": "robot",
+        "label": "agents",
+        "blockdef": {
+            "meta": {
+                "view": "agentcontrol"
+            }
+        }
     }
 }

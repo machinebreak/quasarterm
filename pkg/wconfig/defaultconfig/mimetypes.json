@@ -1,72 +1,206 @@
 {
-    "audio": {
-        "icon": "file-audio"
-    },
-    "application/pdf": {
-        "icon": "file-pdf"
-    },
-    "application/javascript": {
-        "icon": "js fa-brands"
-    },
-    "application/typescript": {
-        "icon": "js fa-brands"
-    },
-    "application/json": {
-        "icon": "file-lines"
-    },
     "directory": {
         "icon": "folder",
         "color": "var(--term-bright-blue)"
     },
-    "font": {
-        "icon": "book-font"
+    "text": {
+        "icon": "file-lines",
+        "color": "#9da5b4"
+    },
+    "application": {
+        "icon": "file",
+        "color": "#9da5b4"
+    },
+    "audio": {
+        "icon": "file-audio",
+        "color": "#00b4ab"
     },
     "image": {
-        "icon": "file-image"
-    },
-    "text": {
-        "icon": "file-lines"
-    },
-    "text/css": {
-        "icon": "css3-alt fa-brands"
-    },
-    "text/javascript": {
-        "icon": "js fa-brands"
-    },
-    "text/typescript": {
-        "icon": "js fa-brands"
-    },
-    "text/golang": {
-        "icon": "golang fa-brands"
-    },
-    "text/html": {
-        "icon": "html5 fa-brands"
-    },
-    "text/less": {
-        "icon": "less fa-brands"
-    },
-    "text/markdown": {
-        "icon": "markdown fa-brands"
-    },
-    "text/rust": {
-        "icon": "rust fa-brands"
-    },
-    "text/scss": {
-        "icon": "sass fa-brands"
+        "icon": "file-image",
+        "color": "#d16d9e"
     },
     "video": {
-        "icon": "file-video"
+        "icon": "file-video",
+        "color": "#e8a33d"
     },
-    "text/csv": {
-        "icon": "file-csv"
+    "font": {
+        "icon": "font",
+        "color": "#a78bfa"
     },
-    "text/x-dart": {
-        "icon": "dart-lang fa-brands"
+    "application/pdf": {
+        "icon": "file-pdf",
+        "color": "#f14c4c"
+    },
+    "application/zip": {
+        "icon": "file-zipper",
+        "color": "#e2b93d"
+    },
+    "application/x-tar": {
+        "icon": "file-zipper",
+        "color": "#e2b93d"
+    },
+    "application/gzip": {
+        "icon": "file-zipper",
+        "color": "#e2b93d"
+    },
+    "application/x-7z-compressed": {
+        "icon": "file-zipper",
+        "color": "#e2b93d"
+    },
+    "application/vnd.rar": {
+        "icon": "file-zipper",
+        "color": "#e2b93d"
+    },
+    "application/vnd.microsoft.portable-executable": {
+        "icon": "gears",
+        "color": "#8b949e"
+    },
+    "application/wasm": {
+        "icon": "microchip",
+        "color": "#7f52ff"
+    },
+    "application/sql": {
+        "icon": "database",
+        "color": "#e38c00"
+    },
+    "application/vnd.sqlite3": {
+        "icon": "database",
+        "color": "#a78bfa"
+    },
+    "application/xml": {
+        "icon": "file-code",
+        "color": "#8b949e"
+    },
+    "application/toml": {
+        "icon": "gear-code",
+        "color": "#9c4221"
+    },
+    "application/x-yaml": {
+        "icon": "gear-code",
+        "color": "#9c6ade"
+    },
+    "application/json": {
+        "icon": "brackets-curly",
+        "color": "#cbcb41"
+    },
+    "application/javascript": {
+        "icon": "js fa-brands",
+        "color": "#f1e05a"
+    },
+    "text/javascript": {
+        "icon": "js fa-brands",
+        "color": "#f1e05a"
+    },
+    "text/jsx": {
+        "icon": "react fa-brands",
+        "color": "#61dafb"
+    },
+    "application/typescript": {
+        "icon": "js fa-brands",
+        "color": "#3178c6"
+    },
+    "text/typescript": {
+        "icon": "js fa-brands",
+        "color": "#3178c6"
+    },
+    "text/x-python": {
+        "icon": "python fa-brands",
+        "color": "#3776ab"
     },
     "text/x-go": {
-        "icon": "golang fa-brands"
+        "icon": "golang fa-brands",
+        "color": "#00add8"
+    },
+    "text/golang": {
+        "icon": "golang fa-brands",
+        "color": "#00add8"
     },
     "text/x-rust": {
-        "icon": "rust fa-brands"
+        "icon": "rust fa-brands",
+        "color": "#dea584"
+    },
+    "text/rust": {
+        "icon": "rust fa-brands",
+        "color": "#dea584"
+    },
+    "text/x-dart": {
+        "icon": "dart-lang fa-brands",
+        "color": "#0175c2"
+    },
+    "text/swift": {
+        "icon": "swift fa-brands",
+        "color": "#f05138"
+    },
+    "text/x-kotlin": {
+        "icon": "file-code",
+        "color": "#7f52ff"
+    },
+    "text/x-java": {
+        "icon": "java fa-brands",
+        "color": "#b07219"
+    },
+    "application/x-php": {
+        "icon": "php fa-brands",
+        "color": "#777bb4"
+    },
+    "application/x-ruby": {
+        "icon": "gem",
+        "color": "#cc342d"
+    },
+    "text/x-csrc": {
+        "icon": "file-code",
+        "color": "#659ad2"
+    },
+    "text/x-c++src": {
+        "icon": "file-code",
+        "color": "#659ad2"
+    },
+    "text/x-chdr": {
+        "icon": "file-code",
+        "color": "#659ad2"
+    },
+    "text/x-lua": {
+        "icon": "moon",
+        "color": "#51a0cf"
+    },
+    "text/markdown": {
+        "icon": "markdown fa-brands",
+        "color": "#519aba"
+    },
+    "text/html": {
+        "icon": "html5 fa-brands",
+        "color": "#e34f26"
+    },
+    "text/css": {
+        "icon": "css3-alt fa-brands",
+        "color": "#1572b6"
+    },
+    "text/scss": {
+        "icon": "sass fa-brands",
+        "color": "#c6538c"
+    },
+    "text/less": {
+        "icon": "less fa-brands",
+        "color": "#2b5a83"
+    },
+    "application/x-sh": {
+        "icon": "terminal",
+        "color": "#89e051"
+    },
+    "text/csv": {
+        "icon": "file-csv",
+        "color": "#2ea043"
+    },
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
+        "icon": "file-word",
+        "color": "#2b579a"
+    },
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+        "icon": "file-excel",
+        "color": "#217346"
+    },
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": {
+        "icon": "file-powerpoint",
+        "color": "#d24726"
     }
 }

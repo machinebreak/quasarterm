@@ -64,8 +64,7 @@ func GetNewTabLayout() PortableLayout {
 	return PortableLayout{
 		{IndexArr: []int{0}, BlockDef: &waveobj.BlockDef{
 			Meta: waveobj.MetaMapType{
-				waveobj.MetaKey_View:       "term",
-				waveobj.MetaKey_Controller: "shell",
+				waveobj.MetaKey_View: "projectlauncher",
 			},
 		}, Focused: true},
 	}

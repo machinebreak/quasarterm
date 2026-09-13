@@ -102,11 +102,13 @@ const (
 	MetaKey_LayoutVTabBarWidth               = "layout:vtabbarwidth"
 	MetaKey_LayoutWidgetsVisible             = "layout:widgetsvisible"
 
-	MetaKey_WaveAiPanelOpen                  = "waveai:panelopen"
-	MetaKey_WaveAiPanelWidth                 = "waveai:panelwidth"
-	MetaKey_WaveAiModel                      = "waveai:model"
-	MetaKey_WaveAiChatId                     = "waveai:chatid"
-	MetaKey_WaveAiWidgetContext              = "waveai:widgetcontext"
+	MetaKey_CanvasX                          = "canvas:x"
+	MetaKey_CanvasY                          = "canvas:y"
+	MetaKey_CanvasW                          = "canvas:w"
+	MetaKey_CanvasH                          = "canvas:h"
+
+	MetaKey_AccountProvider                  = "account:provider"
+	MetaKey_AccountAutoSwitch                = "account:autoswitch"
 
 	MetaKey_TermClear                        = "term:*"
 	MetaKey_TermFontSize                     = "term:fontsize"
