@@ -1,6 +1,6 @@
 module github.com/wavetermdev/waveterm
 
-go 1.25.6
+go 1.26.0
 
 require (
 	github.com/Microsoft/go-winio v0.6.2
@@ -32,7 +32,7 @@ require (
 	golang.org/x/crypto v0.52.0
 	golang.org/x/mod v0.35.0
 	golang.org/x/sync v0.20.0
-	golang.org/x/sys v0.46.0
+	golang.org/x/sys v0.48.0
 	golang.org/x/term v0.44.0
 )
 
