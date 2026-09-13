@@ -4,6 +4,7 @@
 package accounts
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -332,6 +333,8 @@ func (m *Manager) executeWake(task *WakeTask) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("%s does not support wake tasks", provider.Info().Name)
 	}
+	// Keep the stored credentials fresh before the wake uses them.
+	m.syncActiveCredentialsToStore(provider)
 	credentials, err := loadCredentials(task.Provider, task.AccountID)
 	if err != nil {
 		return "", err
@@ -367,24 +370,58 @@ func runWakeCommand(execPath string, args []string, env []string, dir string) (s
 	defer cancel()
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
-		cmd = exec.CommandContext(ctx, "cmd.exe", append([]string{"/c", execPath}, args...)...)
+		cmd = exec.Command("cmd.exe", append([]string{"/c", execPath}, args...)...)
 	} else {
-		cmd = exec.CommandContext(ctx, execPath, args...)
+		cmd = exec.Command(execPath, args...)
 	}
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), env...)
-	output, err := cmd.CombinedOutput()
-	snippet := summarizeWakeOutput(string(output))
-	if ctx.Err() == context.DeadlineExceeded {
-		return snippet, fmt.Errorf("wake timed out after %s", wakeRunTimeout)
+	var output bytes.Buffer
+	cmd.Stdout = &output
+	cmd.Stderr = &output
+	if err := cmd.Start(); err != nil {
+		return "", err
 	}
-	if err != nil {
+	done := make(chan error, 1)
+	go func() {
+		done <- cmd.Wait()
+	}()
+	var waitErr error
+	select {
+	case waitErr = <-done:
+	case <-ctx.Done():
+		killProcessTree(cmd.Process.Pid)
+		<-done
+		return summarizeWakeOutput(output.String()), fmt.Errorf("wake timed out after %s", wakeRunTimeout)
+	}
+	snippet := summarizeWakeOutput(output.String())
+	if waitErr != nil {
 		if snippet != "" {
-			return snippet, fmt.Errorf("%v: %s", err, snippet)
+			return snippet, fmt.Errorf("%v: %s", waitErr, snippet)
 		}
-		return snippet, err
+		return snippet, waitErr
 	}
 	return snippet, nil
+}
+
+// killProcessTree terminates a wake run and its children. On Windows the
+// direct child is cmd.exe, so killing only it would leave the CLI running
+// (and still consuming quota). taskkill failures — including "process not
+// found" (exit code 128) — are intentionally ignored: the process being
+// already gone is the desired end state, not an error (lesson from the
+// cockpit-tools taskkill misclassification bug).
+func killProcessTree(pid int) {
+	if pid <= 0 {
+		return
+	}
+	if runtime.GOOS == "windows" {
+		kill := exec.Command("taskkill", "/F", "/T", "/PID", fmt.Sprintf("%d", pid))
+		_ = kill.Run()
+		return
+	}
+	if process, err := os.FindProcess(pid); err == nil {
+		_ = process.Kill()
+	}
 }
 
 func summarizeWakeOutput(output string) string {
@@ -404,9 +441,6 @@ func summarizeWakeOutput(output string) string {
 
 func (m *Manager) StartWakeScheduler(ctx context.Context) {
 	go func() {
-		defer func() {
-			recover()
-		}()
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
 		for {
@@ -414,7 +448,14 @@ func (m *Manager) StartWakeScheduler(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				m.runDueWakeTasks(ctx)
+				// Recover per tick: one panicking wake task must not stop the
+				// scheduler for every other task.
+				func() {
+					defer func() {
+						recover()
+					}()
+					m.runDueWakeTasks(ctx)
+				}()
 			}
 		}
 	}()

@@ -311,7 +311,7 @@ func (p *CodexProvider) ensureFreshTokens(ctx context.Context, credentials []byt
 	if err != nil {
 		return nil, nil, err
 	}
-	if !codexTokenExpired(tokens.AccessToken) {
+	if !codexTokensNeedRefresh(tokens) {
 		return credentials, tokens, nil
 	}
 	if tokens.RefreshToken == "" {
@@ -322,6 +322,14 @@ func (p *CodexProvider) ensureFreshTokens(ctx context.Context, credentials []byt
 		return credentials, tokens, nil
 	}
 	return newCredentials, newTokens, nil
+}
+
+// codexTokensNeedRefresh reports whether either OAuth token is expired or
+// about to expire. The CLI uses the access token for requests, but an expired
+// id_token pushes clients into the sign-in flow on launch, so refresh in both
+// cases (mirrors the fix in cockpit-tools).
+func codexTokensNeedRefresh(tokens *codexAuthTokens) bool {
+	return codexTokenExpired(tokens.AccessToken) || codexTokenExpired(tokens.IDToken)
 }
 
 func codexTokenExpired(accessToken string) bool {

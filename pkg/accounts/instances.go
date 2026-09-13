@@ -54,6 +54,8 @@ func (m *Manager) CreateInstance(providerID string, accountID string, name strin
 	if !ok {
 		return nil, fmt.Errorf("%s does not support multiple instances yet", provider.Info().Name)
 	}
+	// Keep the stored credentials fresh before preparing the instance profile.
+	m.syncActiveCredentialsToStore(provider)
 	idx, err := loadIndex()
 	if err != nil {
 		return nil, err
@@ -141,6 +143,8 @@ func (m *Manager) UpdateInstance(instanceID string, name string, dir string, arg
 		if !ok {
 			return nil, fmt.Errorf("%s does not support multiple instances yet", provider.Info().Name)
 		}
+		// Keep the stored credentials fresh before preparing the new profile.
+		m.syncActiveCredentialsToStore(provider)
 		account := findAccount(idx, instance.Provider, instance.AccountID)
 		if account == nil {
 			return nil, fmt.Errorf("account not found for instance")
@@ -210,6 +214,8 @@ func (m *Manager) InstanceLaunchSpec(instanceID string) (*InstanceLaunchSpec, er
 	if !ok {
 		return nil, fmt.Errorf("%s does not support multiple instances yet", provider.Info().Name)
 	}
+	// Keep the stored credentials fresh before preparing the launch profile.
+	m.syncActiveCredentialsToStore(provider)
 	account := findAccount(idx, instance.Provider, instance.AccountID)
 	if account == nil {
 		return nil, fmt.Errorf("account not found for instance")

@@ -3,6 +3,15 @@
 All notable changes to Quasar are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
+## [0.1.2] - 2026-09-13
+
+### Fixed
+
+- Account switching no longer reverts tokens refreshed by the CLI itself: before the live credentials file is overwritten, the current account's freshest credentials (including CLI-side token refreshes) are captured back into the store. The same sync now also runs before instance launches and wake runs. (Bug class fixed upstream in cockpit-tools: stale OAuth credentials being restored after switching.)
+- Codex sessions now also refresh when the **id_token** is expired, not only the access token — an expired id_token sends clients into the sign-in flow on launch even while the access token still works.
+- Wake runs that hit the timeout now terminate the whole process tree (on Windows the CLI runs under `cmd.exe`); the previous behavior could leave an orphaned CLI consuming quota. `taskkill` reporting "process not found" (exit code 128) is treated as success, not an error.
+- The quota monitor and the wake scheduler now recover per cycle: a panic in one provider no longer stops monitoring for every other account.
+
 ## [0.1.1] - 2026-09-13
 
 ### Fixed

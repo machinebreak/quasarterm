@@ -208,6 +208,10 @@ func (m *Manager) SwitchAccount(providerID string, accountID string) error {
 	if err != nil {
 		return err
 	}
+	// Capture the live credentials of the account we are about to move away
+	// from (the CLI may have refreshed its tokens) before overwriting the
+	// file with the target account's stored copy.
+	m.syncActiveCredentialsToStore(provider)
 	idx, err := loadIndex()
 	if err != nil {
 		return err
@@ -596,12 +600,16 @@ func (m *Manager) StartQuotaMonitor(ctx context.Context, interval time.Duration)
 		interval = 5 * time.Minute
 	}
 	go func() {
-		defer func() {
-			recover()
-		}()
 		time.Sleep(30 * time.Second)
 		for {
-			m.RefreshAllQuotas(ctx)
+			// Recover per cycle: a panic in one provider refresh must not stop
+			// quota monitoring for the rest.
+			func() {
+				defer func() {
+					recover()
+				}()
+				m.RefreshAllQuotas(ctx)
+			}()
 			select {
 			case <-ctx.Done():
 				return
