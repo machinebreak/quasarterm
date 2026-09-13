@@ -6,7 +6,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2
 	github.com/alexflint/go-filemutex v1.3.0
 	github.com/creack/pty v1.1.24
-	github.com/ebitengine/purego v0.10.1
+	github.com/ebitengine/purego v0.10.2
 	github.com/emirpasic/gods v1.18.1
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
@@ -22,7 +22,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.44
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/sawka/txwrap v0.2.0
-	github.com/shirou/gopsutil/v4 v4.26.4
+	github.com/shirou/gopsutil/v4 v4.26.8
 	github.com/skeema/knownhosts v1.3.1
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/cobra v1.10.2
