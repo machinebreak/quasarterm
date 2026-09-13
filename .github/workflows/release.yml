@@ -51,5 +51,16 @@ jobs:
               if: startsWith(github.ref, 'refs/tags/')
               uses: softprops/action-gh-release@v2
               with:
+                  name: Quasar ${{ github.ref_name }}
                   files: make/*
-                  generate_release_notes: true
+                  generate_release_notes: false
+                  body: |
+                      ## Quasar ${{ github.ref_name }} — first packaged release 🎉
+
+                      **Downloads (Windows x64):** NSIS installer (`.exe`), MSI package and a portable `.zip`.
+
+                      > The installer is not code-signed yet — Windows SmartScreen may ask you to confirm.
+
+                      Run Codex, Claude, Cursor, Copilot and friends without losing track of them: an AI CLI **account manager** with quota monitoring, plus an **agent cockpit** (running / waiting / interrupted runs, with one-click resume). No telemetry, no cloud.
+
+                      See the [README](https://github.com/machinebreak/quasarterm#readme) for everything else.
