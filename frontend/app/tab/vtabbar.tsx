@@ -3,50 +3,23 @@
 
 import { Tooltip } from "@/app/element/tooltip";
 import { getTabBadgeAtom } from "@/app/store/badge";
+import { acknowledgeTabAgentRuns, getTabAgentRunAtom, getTabCliProviderAtom } from "@/app/store/cliprovider";
 import { getTabModelByTabId } from "@/app/store/tab-model";
 import { makeORef } from "@/app/store/wos";
 import { TabRpcClient } from "@/app/store/wshrpcutil";
 import { useWaveEnv } from "@/app/waveenv/waveenv";
-import { WorkspaceLayoutModel } from "@/app/workspace/workspace-layout-model";
 import { validateCssColor } from "@/util/color-validator";
 import { cn, fireAndForget } from "@/util/util";
 import { useAtomValue } from "jotai";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { buildTabBarContextMenu, buildTabContextMenu } from "./tabcontextmenu";
+import { getFolderBasename } from "./tabdisplay";
+import { closeTabOrReset } from "./tabops";
 import { UpdateStatusBanner } from "./updatebanner";
 import { VTab, VTabItem } from "./vtab";
 import { VTabBarEnv } from "./vtabbarenv";
 import { WorkspaceSwitcher } from "./workspaceswitcher";
 export type { VTabItem } from "./vtab";
-
-const VTabBarAIButton = memo(() => {
-    const env = useWaveEnv<VTabBarEnv>();
-    const aiPanelOpen = useAtomValue(WorkspaceLayoutModel.getInstance().panelVisibleAtom);
-    const hideAiButton = useAtomValue(env.getSettingsKeyAtom("app:hideaibutton"));
-
-    const onClick = () => {
-        const currentVisible = WorkspaceLayoutModel.getInstance().getAIPanelVisible();
-        WorkspaceLayoutModel.getInstance().setAIPanelVisible(!currentVisible);
-    };
-
-    if (hideAiButton) {
-        return null;
-    }
-
-    return (
-        <Tooltip
-            content="Toggle Wave AI Panel"
-            placement="bottom"
-            hideOnClick
-            divClassName={`flex h-[22px] px-3.5 justify-end mb-1 items-center rounded-md mr-1 box-border cursor-pointer bg-hover hover:bg-hoverbg transition-colors text-[12px] ${aiPanelOpen ? "text-accent" : "text-secondary"}`}
-            divStyle={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-            divOnClick={onClick}
-        >
-            <i className="fa fa-sparkles" />
-        </Tooltip>
-    );
-});
-VTabBarAIButton.displayName = "VTabBarAIButton";
 
 const MacOSHeader = memo(() => {
     const env = useWaveEnv<VTabBarEnv>();
@@ -68,7 +41,6 @@ const MacOSHeader = memo(() => {
                 className="flex shrink-0 flex-row flex-wrap items-end px-1 pb-1 pl-2"
                 style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
             >
-                <VTabBarAIButton />
                 <Tooltip content="Workspace Switcher" placement="bottom" hideOnClick divClassName="flex items-center">
                     <WorkspaceSwitcher />
                 </Tooltip>
@@ -121,6 +93,11 @@ function VTabWrapper({
     const env = useWaveEnv<VTabBarEnv>();
     const [tabData] = env.wos.useWaveObjectValue<Tab>(makeORef("tab", tabId));
     const badges = useAtomValue(getTabBadgeAtom(tabId, env));
+    const cliProviderId = useAtomValue(getTabCliProviderAtom(tabId, env));
+    const agentRun = useAtomValue(getTabAgentRunAtom(tabId, env));
+    const documentHasFocus = useAtomValue(env.atoms.documentHasFocus);
+    const folderPath = useAtomValue(env.getTabMetaKeyAtom(tabId, "cmd:cwd"));
+    const folderName = getFolderBasename(folderPath);
     const renameRef = useRef<(() => void) | null>(null);
     const tabModel = getTabModelByTabId(tabId, env);
 
@@ -133,6 +110,12 @@ function VTabWrapper({
             }
         };
     }, [tabModel]);
+
+    useEffect(() => {
+        if (active && documentHasFocus && agentRun != null && agentRun.state === "done" && !agentRun.acknowledged) {
+            acknowledgeTabAgentRuns(tabId, env);
+        }
+    }, [active, documentHasFocus, agentRun, tabId, env]);
 
     const rawFlagColor = tabData?.meta?.["tab:flagcolor"];
     let flagColor: string | null = null;
@@ -150,6 +133,11 @@ function VTabWrapper({
         name: tabData?.name ?? "",
         badges,
         flagColor,
+        folderName,
+        folderPath,
+        cliProviderId,
+        blockids: tabData?.blockids ?? [],
+        agentRun,
     };
 
     const handleContextMenu = useCallback(
@@ -162,10 +150,20 @@ function VTabWrapper({
         [tabId, onClose, env]
     );
 
+    const handleActions = useCallback(
+        (e: React.MouseEvent<HTMLButtonElement>) => {
+            e.stopPropagation();
+            const menu = buildTabContextMenu(tabId, renameRef, () => onClose(), env);
+            env.showContextMenu(menu, e);
+        },
+        [tabId, onClose, env]
+    );
+
     return (
         <VTab
             key={`${tabId}:${hoverResetVersion}`}
             tab={tab}
+            agentRun={agentRun}
             active={active}
             showDivider={showDivider}
             isDragging={isDragging}
@@ -174,6 +172,7 @@ function VTabWrapper({
             onClose={onClose}
             onRename={onRename}
             onContextMenu={handleContextMenu}
+            onActions={handleActions}
             onDragStart={onDragStart}
             onDragOver={onDragOver}
             onDrop={onDrop}
@@ -333,7 +332,7 @@ export function VTabBar({ workspace, className }: VTabBarProps) {
             {env.isMacOS() && <MacOSHeader />}
             <div
                 ref={scrollContainerRef}
-                className="relative flex min-h-0 flex-col overflow-y-auto"
+                className="relative flex min-h-0 flex-col overflow-y-auto overscroll-contain"
                 onDragOver={(event) => {
                     event.preventDefault();
                     updateScrollFromDragY(event.clientY);
@@ -374,7 +373,7 @@ export function VTabBar({ workspace, className }: VTabBarProps) {
                             hoverResetVersion={hoverResetVersion}
                             index={index}
                             onSelect={() => env.electron.setActiveTab(tabId)}
-                            onClose={() => fireAndForget(() => env.electron.closeTab(workspace.oid, tabId, false))}
+                            onClose={() => fireAndForget(() => closeTabOrReset(workspace.oid, tabId, false))}
                             onRename={(newName) =>
                                 fireAndForget(() => env.rpc.UpdateTabNameCommand(TabRpcClient, tabId, newName))
                             }

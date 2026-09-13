@@ -24,6 +24,11 @@
         display: flex;
         align-items: center;
         justify-content: center;
+
+        // The brand mark is shorter than the old logo: bump it to fill the 15px box.
+        .fa-wave-logo-solid {
+            font-size: 16px;
+        }
     }
 }
 
@@ -123,6 +128,10 @@
         &.is-current .menu-group-title-wrapper {
             background-color: rgb(from var(--workspace-color) r g b / 0.1);
         }
+    }
+
+    .left-icon.fa-wave-logo-solid {
+        font-size: 15px;
     }
 
     .expandable-menu-item,

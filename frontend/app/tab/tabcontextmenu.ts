@@ -1,11 +1,12 @@
 // Copyright 2026, Command Line Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-import { getOrefMetaKeyAtom, globalStore, recordTEvent } from "@/app/store/global";
+import { createBlock, getOrefMetaKeyAtom, getTabMetaKeyAtom, globalStore, recordTEvent } from "@/app/store/global";
 import { TabRpcClient } from "@/app/store/wshrpcutil";
 import { fireAndForget } from "@/util/util";
 import { makeORef } from "../store/wos";
 import type { TabEnv } from "./tab";
+import { duplicateTab } from "./tabops";
 
 const FlagColors: { label: string; value: string }[] = [
     { label: "Green", value: "#58C142" },
@@ -19,6 +20,7 @@ const FlagColors: { label: string; value: string }[] = [
 
 export function buildTabBarContextMenu(env: TabEnv): ContextMenuItem[] {
     const currentTabBar = globalStore.get(env.getSettingsKeyAtom("app:tabbar")) ?? "top";
+    const canvasMode = globalStore.get(env.getSettingsKeyAtom("app:canvasmode")) ?? false;
     const tabBarSubmenu: ContextMenuItem[] = [
         {
             label: "Top",
@@ -33,7 +35,15 @@ export function buildTabBarContextMenu(env: TabEnv): ContextMenuItem[] {
             click: () => fireAndForget(() => env.rpc.SetConfigCommand(TabRpcClient, { "app:tabbar": "left" })),
         },
     ];
-    return [{ label: "Tab Bar Position", type: "submenu", submenu: tabBarSubmenu }];
+    return [
+        { label: "Tab Bar Position", type: "submenu", submenu: tabBarSubmenu },
+        {
+            label: "Canvas Mode",
+            type: "checkbox",
+            checked: canvasMode,
+            click: () => fireAndForget(() => env.rpc.SetConfigCommand(TabRpcClient, { "app:canvasmode": !canvasMode })),
+        },
+    ];
 }
 
 export function buildTabContextMenu(
@@ -49,8 +59,26 @@ export function buildTabContextMenu(
             label: "Copy TabId",
             click: () => fireAndForget(() => navigator.clipboard.writeText(id)),
         },
+        { label: "Duplicate Tab", click: () => fireAndForget(() => duplicateTab(id)) },
         { type: "separator" }
     );
+    const tabCwd = globalStore.get(getTabMetaKeyAtom(id, "cmd:cwd"));
+    if (tabCwd != null && tabCwd !== "") {
+        menu.push(
+            {
+                label: "Copy Project Path",
+                click: () => fireAndForget(() => navigator.clipboard.writeText(tabCwd)),
+            },
+            {
+                label: "New Terminal in Project",
+                click: () =>
+                    fireAndForget(() =>
+                        createBlock({ meta: { view: "term", controller: "shell", "cmd:cwd": tabCwd } })
+                    ),
+            },
+            { type: "separator" }
+        );
+    }
     const tabORef = makeORef("tab", id);
     const currentFlagColor = globalStore.get(getOrefMetaKeyAtom(tabORef, "tab:flagcolor")) ?? null;
     const flagSubmenu: ContextMenuItem[] = [

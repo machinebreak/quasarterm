@@ -3,10 +3,23 @@
 
 import type { BlockNodeModel } from "@/app/block/blocktypes";
 import { setBadge } from "@/app/store/badge";
+import {
+    AgentLastRunMetaKey,
+    beginBlockAgentRun,
+    finishBlockAgentRun,
+    getBlockAgentRunAtom,
+    markBlockAgentActivity,
+    setBlockCliProvider,
+    type PersistedAgentRun,
+} from "@/app/store/cliprovider";
 import { getFileSubject } from "@/app/store/wps";
 import { RpcApi } from "@/app/store/wshclientapi";
 import { TabRpcClient } from "@/app/store/wshrpcutil";
+import { AgentNotifyMinDurationMs, formatAgentDuration } from "@/app/tab/agentstatus";
+import { getFolderBasename } from "@/app/tab/tabdisplay";
+import { providerDisplayName } from "@/app/view/accounts/providericons";
 import {
+    atoms,
     fetchWaveFile,
     getApi,
     getOverrideConfigAtom,
@@ -14,6 +27,7 @@ import {
     globalStore,
     isDev,
     openLink,
+    refocusNode,
     WOS,
 } from "@/store/global";
 import * as services from "@/store/services";
@@ -29,6 +43,7 @@ import { Terminal } from "@xterm/xterm";
 import debug from "debug";
 import * as jotai from "jotai";
 import { debounce } from "throttle-debounce";
+import { providerIdFromCommand } from "./clidetect";
 import {
     handleOsc16162Command,
     handleOsc52Command,
@@ -36,6 +51,7 @@ import {
     isClaudeCodeCommand,
     type ShellIntegrationStatus,
 } from "./osc-handlers";
+import { stripBlackBackgroundEscapes } from "./termoutput";
 import {
     bufferLinesToText,
     createTempFileFromBlob,
@@ -74,6 +90,25 @@ type TermWrapOptions = {
     nodeModel?: BlockNodeModel;
 };
 
+// A finish event (OSC 16162 A/D/R) does not finalize an agent run
+// immediately: CLIs that shell out internally (Codex running tool commands)
+// can emit spurious end-of-command events while still working. The run is
+// finalized only after the terminal has been quiet for this long; any new
+// output (agents animate spinners while working) postpones it.
+const AgentFinishQuietMs = 2500;
+
+// Finds the tab (in the current window's workspace) that contains a block.
+function findBlockTabId(blockId: string): string {
+    const ws = globalStore.get(atoms.workspace);
+    for (const tabId of ws?.tabids ?? []) {
+        const tab = globalStore.get(WOS.getWaveObjectAtom<Tab>(WOS.makeORef("tab", tabId)));
+        if (tab?.blockids?.includes(blockId)) {
+            return tabId;
+        }
+    }
+    return null;
+}
+
 export class TermWrap {
     tabId: string;
     blockId: string;
@@ -98,6 +133,13 @@ export class TermWrap {
     webglEnabledAtom: jotai.PrimitiveAtom<boolean>;
     pasteActive: boolean = false;
     lastUpdated: number;
+    lastAgentActivityMarkTs: number = 0;
+    lastPersistedAgentRunKey: string = null;
+    agentFinishPending: boolean = false;
+    pendingFinishExitCode: number = null;
+    pendingFinishTimer: number = null;
+    sgrTextDecoder: TextDecoder = new TextDecoder();
+    pendingSgrTail: string = "";
     promptMarkers: TermTypes.IMarker[] = [];
     shellIntegrationStatusAtom: jotai.PrimitiveAtom<ShellIntegrationStatus | null>;
     lastCommandAtom: jotai.PrimitiveAtom<string | null>;
@@ -242,7 +284,15 @@ export class TermWrap {
                     this.inSyncTransaction = false;
                     const wasRepaint = this.inRepaintTransaction;
                     this.inRepaintTransaction = false;
-                    if (wasRepaint && Date.now() - this.lastClearScrollbackTs <= MaxRepaintTransactionMs) {
+                    // Workaround for the Claude Code scroll-to-top bug (#2956).
+                    // Only apply it to Claude Code: other TUIs (e.g. Codex)
+                    // repaint differently and the forced scroll makes the
+                    // cursor/content jump around.
+                    if (
+                        wasRepaint &&
+                        Date.now() - this.lastClearScrollbackTs <= MaxRepaintTransactionMs &&
+                        globalStore.get(this.claudeCodeActiveAtom)
+                    ) {
                         setTimeout(() => {
                             console.log("[termwrap] repaint transaction complete, scrolling to bottom");
                             this.terminal.scrollToBottom();
@@ -432,6 +482,7 @@ export class TermWrap {
         } catch (e) {
             console.log("Error loading runtime info:", e);
         }
+        this.syncCliProvider();
 
         try {
             await this.loadInitialTerminalData();
@@ -441,7 +492,160 @@ export class TermWrap {
         this.runProcessIdleTimeout();
     }
 
+    // Publishes the AI CLI agent (claude, codex, ...) currently running in
+    // this terminal so the tab bar can render its logo. Unknown CLIs
+    // (no logo) report null and display nothing.
+    syncCliProvider() {
+        const shellState = globalStore.get(this.shellIntegrationStatusAtom);
+        const lastCommand = globalStore.get(this.lastCommandAtom);
+        const providerId = shellState === "running-command" ? providerIdFromCommand(lastCommand) : null;
+        setBlockCliProvider(this.blockId, providerId);
+        if (providerId != null) {
+            // a (re)started agent command invalidates any pending finish
+            this.cancelAgentRunFinish();
+            beginBlockAgentRun(this.blockId, providerId);
+            const run = globalStore.get(getBlockAgentRunAtom(this.blockId));
+            if (run != null) {
+                this.persistAgentRunMeta({
+                    providerId: run.providerId,
+                    state: "running",
+                    startTs: run.startTs,
+                });
+            }
+        }
+    }
+
+    // Called when a command finishes (OSC 16162 "D", or "A"/"R" as a
+    // fallback): finalizes the agent run (exit code + duration) and shows a
+    // desktop notification when an agent finished while the window was not
+    // focused. The tab marker is rendered from the run state.
+    finishAgentRun(exitCode: number | null) {
+        const run = finishBlockAgentRun(this.blockId, exitCode);
+        if (run == null) {
+            return;
+        }
+        this.persistAgentRunMeta({
+            providerId: run.providerId,
+            state: "done",
+            startTs: run.startTs,
+            endTs: run.endTs,
+            exitCode: run.exitCode ?? null,
+        });
+        const alertsEnabled = globalStore.get(getSettingsKeyAtom("term:agentalerts")) ?? false;
+        if (!alertsEnabled) {
+            return;
+        }
+        const durationMs = run.endTs - run.startTs;
+        const windowFocused = typeof document !== "undefined" && document.hasFocus();
+        if (windowFocused || durationMs < AgentNotifyMinDurationMs) {
+            return;
+        }
+        try {
+            const projectLabel = this.getAgentProjectLabel();
+            const exitText = run.exitCode == null ? "terminó" : `terminó (exit ${run.exitCode})`;
+            const notif = new Notification(`${providerDisplayName(run.providerId)} — ${exitText}`, {
+                body: `${projectLabel != null ? `${projectLabel} · ` : ""}${formatAgentDuration(durationMs)}`,
+                silent: false,
+            });
+            notif.onclick = () => this.focusBlockFromNotification();
+        } catch (e) {
+            dlog("failed to show agent notification", e);
+        }
+    }
+
+    // A finish event (OSC 16162 A/D/R) does not finalize the run immediately:
+    // CLIs that shell out internally can emit spurious end-of-command events
+    // while still working. The run is finalized only after the terminal has
+    // been quiet for AgentFinishQuietMs; new output postpones it (see
+    // doTerminalWrite) and a new agent command cancels it.
+    requestAgentRunFinish(exitCode: number | null) {
+        const run = globalStore.get(getBlockAgentRunAtom(this.blockId));
+        if (run == null || run.state !== "running") {
+            return;
+        }
+        this.agentFinishPending = true;
+        this.pendingFinishExitCode = exitCode ?? null;
+        this.restartAgentFinishTimer();
+    }
+
+    restartAgentFinishTimer() {
+        if (this.pendingFinishTimer != null) {
+            window.clearTimeout(this.pendingFinishTimer);
+        }
+        this.pendingFinishTimer = window.setTimeout(() => {
+            this.pendingFinishTimer = null;
+            if (!this.agentFinishPending) {
+                return;
+            }
+            this.agentFinishPending = false;
+            this.finishAgentRun(this.pendingFinishExitCode);
+        }, AgentFinishQuietMs);
+    }
+
+    cancelAgentRunFinish() {
+        this.agentFinishPending = false;
+        this.pendingFinishExitCode = null;
+        if (this.pendingFinishTimer != null) {
+            window.clearTimeout(this.pendingFinishTimer);
+            this.pendingFinishTimer = null;
+        }
+    }
+
+    // Persists a snapshot of the agent run to the block's meta (survives app
+    // restarts, so interrupted runs can be resumed from the dashboard).
+    // Dedupes consecutive writes of the same run state.
+    persistAgentRunMeta(value: PersistedAgentRun) {
+        const key = `${value.providerId}:${value.startTs}:${value.state}`;
+        if (this.lastPersistedAgentRunKey === key) {
+            return;
+        }
+        this.lastPersistedAgentRunKey = key;
+        fireAndForget(() =>
+            RpcApi.SetMetaCommand(TabRpcClient, {
+                oref: `block:${this.blockId}`,
+                meta: { [AgentLastRunMetaKey]: value } as any,
+            })
+        );
+    }
+
+    // Notification click: bring the app window forward and focus this block.
+    focusBlockFromNotification() {
+        try {
+            const tabId = findBlockTabId(this.blockId);
+            if (tabId != null) {
+                getApi().setActiveTab(tabId);
+            }
+            getApi().focusWindow?.();
+        } catch (e) {
+            // best effort
+        }
+        window.setTimeout(() => {
+            try {
+                refocusNode(this.blockId);
+            } catch (e) {
+                // best effort
+            }
+        }, 300);
+    }
+
+    // Best-effort project label (folder name) for the block's tab.
+    getAgentProjectLabel(): string | null {
+        try {
+            const block = globalStore.get(WOS.getWaveObjectAtom<Block>(WOS.makeORef("block", this.blockId)));
+            const parentOref = block?.parentoref;
+            if (parentOref == null || !parentOref.startsWith("tab:")) {
+                return null;
+            }
+            const tab = globalStore.get(WOS.getWaveObjectAtom<Tab>(WOS.makeORef("tab", parentOref.slice(4))));
+            const cwd = tab?.meta?.["cmd:cwd"] as string | undefined;
+            return getFolderBasename(cwd) ?? tab?.name ?? null;
+        } catch (e) {
+            return null;
+        }
+    }
+
     dispose() {
+        this.cancelAgentRunFinish();
         this.promptMarkers.forEach((marker) => {
             try {
                 marker.dispose();
@@ -480,6 +684,8 @@ export class TermWrap {
         if (msg.fileop == "truncate") {
             this.terminal.clear();
             this.heldData = [];
+            this.sgrTextDecoder = new TextDecoder();
+            this.pendingSgrTail = "";
         } else if (msg.fileop == "append") {
             const decodedData = base64ToArray(msg.data64);
             if (this.loaded) {
@@ -501,11 +707,12 @@ export class TermWrap {
                 this.recentWrites.shift();
             }
         }
+        const writeData = this.processTerminalOutput(data);
         let resolve: () => void = null;
         const prtn = new Promise<void>((presolve, _) => {
             resolve = presolve;
         });
-        this.terminal.write(data, () => {
+        this.terminal.write(writeData, () => {
             if (setPtyOffset != null) {
                 this.ptyOffset = setPtyOffset;
             } else {
@@ -513,9 +720,38 @@ export class TermWrap {
                 this.dataBytesProcessed += data.length;
             }
             this.lastUpdated = Date.now();
+            if (
+                this.lastUpdated - this.lastAgentActivityMarkTs > 250 &&
+                globalStore.get(getBlockAgentRunAtom(this.blockId))?.state === "running"
+            ) {
+                this.lastAgentActivityMarkTs = this.lastUpdated;
+                markBlockAgentActivity(this.blockId);
+                if (this.agentFinishPending) {
+                    // agent is still producing output after a finish event:
+                    // postpone the finalization (spurious end-of-command event)
+                    this.restartAgentFinishTimer();
+                }
+            }
             resolve();
         });
         return prtn;
+    }
+
+    // Decodes incoming terminal bytes to text (streaming decoder, so multi-byte
+    // characters split across chunks survive) and neutralizes black-background
+    // SGR sequences so CLI highlights blend with the theme background. A
+    // partial escape sequence at the end of a chunk is held back until the
+    // next chunk completes it.
+    processTerminalOutput(data: string | Uint8Array): string {
+        const text = typeof data === "string" ? data : this.sgrTextDecoder.decode(data, { stream: true });
+        let combined = this.pendingSgrTail + text;
+        this.pendingSgrTail = "";
+        const partial = combined.match(/\u001b\[[0-9;]*$/); // eslint-disable-line no-control-regex
+        if (partial != null && partial[0].length <= 32) {
+            this.pendingSgrTail = partial[0];
+            combined = combined.slice(0, combined.length - partial[0].length);
+        }
+        return stripBlackBackgroundEscapes(combined);
     }
 
     async loadInitialTerminalData(): Promise<void> {

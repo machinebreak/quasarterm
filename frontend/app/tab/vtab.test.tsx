@@ -61,3 +61,114 @@ describe("VTab badges", () => {
         expect(markup).toContain("#4ade80");
     });
 });
+
+describe("VTab project folder", () => {
+    it("shows the folder name for auto-generated tab names", () => {
+        const markup = renderVTab({
+            id: "tab-3",
+            name: "T1",
+            folderName: "MoviesAndChill",
+            folderPath: "C:\\Users\\Usuario\\MoviesAndChill",
+        });
+
+        expect(markup).toContain("MoviesAndChill");
+        expect(markup).toContain("fa-folder");
+        expect(markup).toContain('title="C:\\Users\\Usuario\\MoviesAndChill"');
+    });
+
+    it("keeps the custom name but still shows the folder icon and path", () => {
+        const markup = renderVTab({
+            id: "tab-4",
+            name: "backend",
+            folderName: "MoviesAndChill",
+            folderPath: "C:\\Users\\Usuario\\MoviesAndChill",
+        });
+
+        expect(markup).toContain("backend");
+        expect(markup).toContain("fa-folder");
+    });
+
+    it("does not show folder decoration for plain tabs", () => {
+        const markup = renderVTab({ id: "tab-5", name: "T2" });
+
+        expect(markup).not.toContain("fa-folder");
+        expect(markup).not.toContain("title=");
+    });
+});
+
+describe("VTab CLI logo", () => {
+    it("shows the agent logo while a known CLI runs in the tab", () => {
+        const markup = renderVTab({ id: "tab-8", name: "backend", cliProviderId: "claude" });
+
+        expect(markup).toContain("<img");
+        expect(markup).toContain('title="Claude"');
+    });
+
+    it("shows the logo next to the name for codex tabs", () => {
+        const markup = renderVTab({ id: "tab-9", name: "quasar", cliProviderId: "codex" });
+
+        expect(markup).toContain("<img");
+        expect(markup).toContain('title="Codex"');
+    });
+
+    it("shows nothing when the CLI has no logo", () => {
+        const markup = renderVTab({ id: "tab-10", name: "aider run", cliProviderId: "aider" });
+
+        expect(markup).not.toContain("<img");
+    });
+
+    it("shows nothing when no CLI is running", () => {
+        const markup = renderVTab({ id: "tab-11", name: "shell" });
+
+        expect(markup).not.toContain("<img");
+    });
+});
+
+describe("VTab agent finished marker", () => {
+    const baseRun = {
+        providerId: "codex",
+        state: "done" as const,
+        startTs: Date.now() - 61_000,
+        endTs: Date.now(),
+        exitCode: 0,
+        acknowledged: false,
+    };
+
+    it("shows a green dot when the agent finished successfully", () => {
+        const markup = renderVTab({ id: "tab-20", name: "backend", agentRun: baseRun });
+
+        expect(markup).toContain('data-testid="agent-dot"');
+        expect(markup).toContain("#4ade80");
+    });
+
+    it("shows a red dot when the agent failed", () => {
+        const markup = renderVTab({
+            id: "tab-21",
+            name: "backend",
+            agentRun: { ...baseRun, exitCode: 1 },
+        });
+
+        expect(markup).toContain('data-testid="agent-dot"');
+        expect(markup).toContain("#f87171");
+    });
+
+    it("hides the dot once the tab was visited", () => {
+        const markup = renderVTab({
+            id: "tab-22",
+            name: "backend",
+            agentRun: { ...baseRun, acknowledged: true },
+        });
+
+        expect(markup).not.toContain('data-testid="agent-dot"');
+    });
+
+    it("shows no dot while the agent is still running", () => {
+        const markup = renderVTab({
+            id: "tab-23",
+            name: "backend",
+            agentRun: { ...baseRun, state: "running", endTs: undefined },
+        });
+
+        expect(markup).not.toContain('data-testid="agent-dot"');
+    });
+});

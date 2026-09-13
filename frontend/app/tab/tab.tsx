@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { getTabBadgeAtom } from "@/app/store/badge";
+import { getTabCliProviderAtom } from "@/app/store/cliprovider";
 import { refocusNode } from "@/app/store/global";
 import { getTabModelByTabId } from "@/app/store/tab-model";
 import { TabRpcClient } from "@/app/store/wshrpcutil";
-import { WaveEnv, WaveEnvSubset, useWaveEnv } from "@/app/waveenv/waveenv";
+import { getProviderIconUrl, providerDisplayName } from "@/app/view/accounts/providericons";
+import { MetaKeyAtomFnType, WaveEnv, WaveEnvSubset, useWaveEnv } from "@/app/waveenv/waveenv";
 import { Button } from "@/element/button";
 import { validateCssColor } from "@/util/color-validator";
 import { fireAndForget } from "@/util/util";
@@ -13,9 +15,10 @@ import clsx from "clsx";
 import { useAtomValue } from "jotai";
 import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { makeORef } from "../store/wos";
-import { TabBadges } from "./tabbadges";
 import "./tab.scss";
+import { TabBadges } from "./tabbadges";
 import { buildTabContextMenu } from "./tabcontextmenu";
+import { getFolderBasename, getTabDisplayName } from "./tabdisplay";
 
 export type TabEnv = WaveEnvSubset<{
     rpc: {
@@ -29,6 +32,7 @@ export type TabEnv = WaveEnvSubset<{
     };
     wos: WaveEnv["wos"];
     getSettingsKeyAtom: WaveEnv["getSettingsKeyAtom"];
+    getTabMetaKeyAtom: MetaKeyAtomFnType<"cmd:cwd">;
     showContextMenu: WaveEnv["showContextMenu"];
 }>;
 
@@ -42,6 +46,9 @@ interface TabVProps {
     isNew: boolean;
     badges?: Badge[] | null;
     flagColor?: string | null;
+    folderName?: string;
+    folderPath?: string;
+    cliProviderId?: string;
     onClick: () => void;
     onClose: (event: React.MouseEvent<HTMLButtonElement, MouseEvent> | null) => void;
     onDragStart: (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
@@ -62,6 +69,9 @@ const TabV = forwardRef<HTMLDivElement, TabVProps>((props, ref) => {
         isNew,
         badges,
         flagColor,
+        folderName,
+        folderPath,
+        cliProviderId,
         onClick,
         onClose,
         onDragStart,
@@ -71,7 +81,8 @@ const TabV = forwardRef<HTMLDivElement, TabVProps>((props, ref) => {
     } = props;
     const MaxTabNameLength = 14;
     const truncateTabName = (name: string) => [...(name ?? "")].slice(0, MaxTabNameLength).join("");
-    const displayName = truncateTabName(tabName);
+    const displayName = truncateTabName(getTabDisplayName(tabName, folderName));
+    const cliIconUrl = cliProviderId ? getProviderIconUrl(cliProviderId) : null;
     const [originalName, setOriginalName] = useState(displayName);
     const [isEditable, setIsEditable] = useState(false);
 
@@ -82,8 +93,8 @@ const TabV = forwardRef<HTMLDivElement, TabVProps>((props, ref) => {
     useImperativeHandle(ref, () => tabRef.current as HTMLDivElement);
 
     useEffect(() => {
-        setOriginalName(truncateTabName(tabName));
-    }, [tabName]);
+        setOriginalName(displayName);
+    }, [displayName]);
 
     useEffect(() => {
         return () => {
@@ -190,19 +201,31 @@ const TabV = forwardRef<HTMLDivElement, TabVProps>((props, ref) => {
             onClick={onClick}
             onContextMenu={onContextMenu}
             data-tab-id={tabId}
+            title={folderPath}
         >
             {showDivider && <div className="tab-divider" />}
             <div className="tab-inner">
-                <div
-                    ref={editableRef}
-                    className={clsx("name", { focused: isEditable })}
-                    contentEditable={isEditable}
-                    onDoubleClick={handleRenameTab}
-                    onBlur={handleBlur}
-                    onKeyDown={handleKeyDown}
-                    suppressContentEditableWarning={true}
-                >
-                    {displayName}
+                <div className="name-group">
+                    {cliIconUrl != null && (
+                        <img
+                            src={cliIconUrl}
+                            alt=""
+                            title={providerDisplayName(cliProviderId)}
+                            className="tab-cli-logo"
+                            draggable={false}
+                        />
+                    )}
+                    <div
+                        ref={editableRef}
+                        className={clsx("name", { focused: isEditable })}
+                        contentEditable={isEditable}
+                        onDoubleClick={handleRenameTab}
+                        onBlur={handleBlur}
+                        onKeyDown={handleKeyDown}
+                        suppressContentEditableWarning={true}
+                    >
+                        {displayName}
+                    </div>
                 </div>
                 <TabBadges badges={badges} flagColor={flagColor} />
                 <Button
@@ -238,6 +261,8 @@ const TabInner = forwardRef<HTMLDivElement, TabProps>((props, ref) => {
     const env = useWaveEnv<TabEnv>();
     const [tabData, _] = env.wos.useWaveObjectValue<Tab>(makeORef("tab", id));
     const badges = useAtomValue(getTabBadgeAtom(id, env));
+    const cliProviderId = useAtomValue(getTabCliProviderAtom(id, env));
+    const folderPath = useAtomValue(env.getTabMetaKeyAtom(id, "cmd:cwd"));
 
     const rawFlagColor = tabData?.meta?.["tab:flagcolor"];
     let flagColor: string | null = null;
@@ -304,6 +329,9 @@ const TabInner = forwardRef<HTMLDivElement, TabProps>((props, ref) => {
             isNew={isNew}
             badges={badges}
             flagColor={flagColor}
+            folderName={getFolderBasename(folderPath)}
+            folderPath={folderPath}
+            cliProviderId={cliProviderId}
             onClick={handleTabClick}
             onClose={onClose}
             onDragStart={onDragStart}

@@ -1,7 +1,7 @@
 // Copyright 2026, Command Line Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-import { SettingsKeyAtomFnType, WaveEnv, WaveEnvSubset } from "@/app/waveenv/waveenv";
+import { MetaKeyAtomFnType, SettingsKeyAtomFnType, WaveEnv, WaveEnvSubset } from "@/app/waveenv/waveenv";
 
 export type TabBarEnv = WaveEnvSubset<{
     electron: {
@@ -28,7 +28,8 @@ export type TabBarEnv = WaveEnvSubset<{
         updaterStatusAtom: WaveEnv["atoms"]["updaterStatusAtom"];
     };
     wos: WaveEnv["wos"];
-    getSettingsKeyAtom: SettingsKeyAtomFnType<"app:hideaibutton" | "app:tabbar" | "tab:confirmclose" | "window:showmenubar">;
+    getSettingsKeyAtom: SettingsKeyAtomFnType<"app:tabbar" | "app:canvasmode" | "tab:confirmclose" | "window:showmenubar">;
+    getTabMetaKeyAtom: MetaKeyAtomFnType<"cmd:cwd">;
     showContextMenu: WaveEnv["showContextMenu"];
     mockSetWaveObj: WaveEnv["mockSetWaveObj"];
     isWindows: WaveEnv["isWindows"];

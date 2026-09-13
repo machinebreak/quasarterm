@@ -33,7 +33,11 @@ export function TabBadges({ badges, flagColor, className }: TabBadgesProps) {
     return (
         <div className={cn(DefaultClassName, className)}>
             <i
-                className={makeIconClass(firstBadge.icon, true, { defaultIcon: "circle-small" }) + " text-[12px]"}
+                className={
+                    makeIconClass(firstBadge.icon, true, { defaultIcon: "circle-small" }) +
+                    " text-[12px]" +
+                    (firstBadge.icon === "spinner" ? " fa-spin" : "")
+                }
                 style={{ color: firstBadge.color || "#fbbf24" }}
             />
             {extraBadges.length > 0 && (

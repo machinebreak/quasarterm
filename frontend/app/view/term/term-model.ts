@@ -1,7 +1,6 @@
 // Copyright 2026, Command Line Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-import { WaveAIModel } from "@/app/aipanel/waveai-model";
 import { BlockNodeModel } from "@/app/block/blocktypes";
 import { appHandleKeyDown } from "@/app/store/keymodel";
 import { modalsModel } from "@/app/store/modalmodel";
@@ -10,10 +9,9 @@ import { waveEventSubscribeSingle } from "@/app/store/wps";
 import { RpcApi } from "@/app/store/wshclientapi";
 import { makeFeBlockRouteId } from "@/app/store/wshrouter";
 import { DefaultRouter, TabRpcClient } from "@/app/store/wshrpcutil";
-import { TermClaudeIcon, TerminalView } from "@/app/view/term/term";
+import { TerminalView } from "@/app/view/term/term";
 import { TermWshClient } from "@/app/view/term/term-wsh";
 import { VDomModel } from "@/app/view/vdom/vdom-model";
-import { WorkspaceLayoutModel } from "@/app/workspace/workspace-layout-model";
 import {
     atoms,
     createBlock,
@@ -39,7 +37,6 @@ import { isMacOS, isWindows } from "@/util/platformutil";
 import { boundNumber, fireAndForget, stringToBase64 } from "@/util/util";
 import * as jotai from "jotai";
 import * as React from "react";
-import { getBlockingCommand } from "./shellblocking";
 import { computeTheme, DefaultTermTheme, isLikelyOnSameHost, trimTerminalSelection } from "./termutil";
 import { TermWrap, WebGLSupported } from "./termwrap";
 
@@ -118,7 +115,7 @@ export class TermViewModel implements ViewModel {
             const blockData = get(this.blockAtom);
             const termMode = get(this.termMode);
             if (termMode == "vdom") {
-                return "Wave App";
+                return "App";
             }
             if (blockData?.meta?.controller == "cmd") {
                 return "";
@@ -145,7 +142,7 @@ export class TermViewModel implements ViewModel {
                 rtn.push({
                     elemtype: "iconbutton",
                     icon: "bolt",
-                    title: "Switch to Wave App",
+                    title: "Switch to App",
                     click: () => {
                         this.setTermMode("vdom");
                     },
@@ -285,14 +282,6 @@ export class TermViewModel implements ViewModel {
             const isCmd = get(this.isCmdController);
             const rtn: IconButtonDecl[] = [];
 
-            const isAIPanelOpen = get(WorkspaceLayoutModel.getInstance().panelVisibleAtom);
-            if (isAIPanelOpen) {
-                const shellIntegrationButton = this.getShellIntegrationIconButton(get);
-                if (shellIntegrationButton) {
-                    rtn.push(shellIntegrationButton);
-                }
-            }
-
             if (get(getSettingsKeyAtom("debug:webglstatus"))) {
                 const webglButton = this.getWebGlIconButton(get);
                 if (webglButton) {
@@ -397,56 +386,6 @@ export class TermViewModel implements ViewModel {
                 this.termRef.current.setCursorBlink(globalStore.get(termCursorBlinkAtom) ?? false);
             }
         });
-    }
-
-    getShellIntegrationIconButton(get: jotai.Getter): IconButtonDecl | null {
-        if (!this.termRef.current?.shellIntegrationStatusAtom) {
-            return null;
-        }
-        const shellIntegrationStatus = get(this.termRef.current.shellIntegrationStatusAtom);
-        const claudeCodeActive = get(this.termRef.current.claudeCodeActiveAtom);
-        const icon = claudeCodeActive ? React.createElement(TermClaudeIcon) : "sparkles";
-        if (shellIntegrationStatus == null) {
-            return {
-                elemtype: "iconbutton",
-                icon,
-                className: "text-muted",
-                title: "No shell integration — Wave AI unable to run commands.",
-                noAction: true,
-            };
-        }
-        if (shellIntegrationStatus === "ready") {
-            return {
-                elemtype: "iconbutton",
-                icon,
-                className: "text-accent",
-                title: "Shell ready — Wave AI can run commands in this terminal.",
-                noAction: true,
-            };
-        }
-        if (shellIntegrationStatus === "running-command") {
-            let title = claudeCodeActive
-                ? "Claude Code Detected"
-                : "Shell busy — Wave AI unable to run commands while another command is running.";
-
-            if (this.termRef.current) {
-                const inAltBuffer = this.termRef.current.terminal?.buffer?.active?.type === "alternate";
-                const lastCommand = get(this.termRef.current.lastCommandAtom);
-                const blockingCmd = getBlockingCommand(lastCommand, inAltBuffer);
-                if (blockingCmd) {
-                    title = `Wave AI integration disabled while you're inside ${blockingCmd}.`;
-                }
-            }
-
-            return {
-                elemtype: "iconbutton",
-                icon,
-                className: "text-warning",
-                title: title,
-                noAction: true,
-            };
-        }
-        return null;
     }
 
     getWebGlIconButton(get: jotai.Getter): IconButtonDecl | null {
@@ -840,22 +779,6 @@ export class TermViewModel implements ViewModel {
                     }
                 },
             });
-            menu.push({ type: "separator" });
-            menu.push({
-                label: "Send to Wave AI",
-                click: () => {
-                    if (selection) {
-                        const aiModel = WaveAIModel.getInstance();
-                        aiModel.appendText(selection, true, { scrollToBottom: true });
-                        const layoutModel = WorkspaceLayoutModel.getInstance();
-                        if (!layoutModel.getAIPanelVisible()) {
-                            layoutModel.setAIPanelVisible(true);
-                        }
-                        aiModel.focusInput();
-                    }
-                },
-            });
-
             menu.push({ type: "separator" });
         }
 

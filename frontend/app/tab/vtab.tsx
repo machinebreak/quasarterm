@@ -1,11 +1,15 @@
 // Copyright 2026, Command Line Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+import { isAnyBlockAgentWaiting, type AgentRunStatus } from "@/app/store/cliprovider";
 import { refocusNode } from "@/app/store/global";
+import { getProviderIconUrl, providerDisplayName } from "@/app/view/accounts/providericons";
 import { validateCssColor } from "@/util/color-validator";
 import { cn } from "@/util/util";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { agentAlertColor, agentRunTooltip, isAgentAlertVisible, useNowTick } from "./agentstatus";
 import { TabBadges } from "./tabbadges";
+import { getTabDisplayName } from "./tabdisplay";
 
 const RenameFocusDelayMs = 50;
 
@@ -15,10 +19,16 @@ export interface VTabItem {
     badge?: Badge | null;
     badges?: Badge[] | null;
     flagColor?: string | null;
+    folderName?: string;
+    folderPath?: string;
+    cliProviderId?: string;
+    blockids?: string[];
+    agentRun?: AgentRunStatus | null;
 }
 
 interface VTabProps {
     tab: VTabItem;
+    agentRun?: AgentRunStatus | null;
     active: boolean;
     showDivider?: boolean;
     isDragging: boolean;
@@ -27,6 +37,7 @@ interface VTabProps {
     onClose?: () => void;
     onRename?: (newName: string) => void;
     onContextMenu?: (event: React.MouseEvent<HTMLDivElement>) => void;
+    onActions?: (event: React.MouseEvent<HTMLButtonElement>) => void;
     onDragStart: (event: React.DragEvent<HTMLDivElement>) => void;
     onDragOver: (event: React.DragEvent<HTMLDivElement>) => void;
     onDrop: (event: React.DragEvent<HTMLDivElement>) => void;
@@ -45,6 +56,7 @@ export function VTab({
     onClose,
     onRename,
     onContextMenu,
+    onActions,
     onDragStart,
     onDragOver,
     onDrop,
@@ -57,6 +69,14 @@ export function VTab({
     const editableRef = useRef<HTMLDivElement>(null);
     const editableTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const badges = tab.badges ?? (tab.badge ? [tab.badge] : null);
+    const displayName = getTabDisplayName(tab.name, tab.folderName);
+    const cliIconUrl = tab.cliProviderId ? getProviderIconUrl(tab.cliProviderId) : null;
+    const nowTs = useNowTick(tab.agentRun != null);
+    const agentAlert = isAgentAlertVisible(tab.agentRun);
+    const agentWaiting =
+        (tab.agentRun?.state === "running" && isAnyBlockAgentWaiting(tab.blockids ?? [], nowTs)) || false;
+    const agentLine = tab.agentRun != null ? agentRunTooltip(tab.agentRun, nowTs, agentWaiting) : null;
+    const tabTitle = [agentLine, tab.folderPath].filter((part) => part != null && part !== "").join("\n") || undefined;
 
     const rawFlagColor = tab.flagColor;
     let flagColor: string | null = null;
@@ -70,8 +90,8 @@ export function VTab({
     }
 
     useEffect(() => {
-        setOriginalName(tab.name);
-    }, [tab.name]);
+        setOriginalName(displayName);
+    }, [displayName]);
 
     useEffect(() => {
         return () => {
@@ -149,6 +169,7 @@ export function VTab({
         <div
             draggable
             data-tabid={tab.id}
+            title={tabTitle}
             onClick={onSelect}
             onDoubleClick={(event) => {
                 event.stopPropagation();
@@ -185,11 +206,29 @@ export function VTab({
                 flagColor={flagColor}
                 className="mr-1 min-w-[16px] shrink-0 static top-auto left-auto z-auto h-[16px] w-auto translate-y-0 justify-start px-[2px] py-[1px] [&_i]:text-[10px]"
             />
+            {tab.folderPath != null && (
+                <i
+                    className={cn(
+                        "fa fa-solid fa-folder pointer-events-none mr-1.5 shrink-0 text-[10px]",
+                        active ? "opacity-70" : "opacity-45"
+                    )}
+                    aria-hidden="true"
+                />
+            )}
+            {cliIconUrl != null && (
+                <img
+                    src={cliIconUrl}
+                    alt=""
+                    title={providerDisplayName(tab.cliProviderId)}
+                    className="pointer-events-none mr-1.5 h-[14px] w-[14px] shrink-0"
+                    draggable={false}
+                />
+            )}
             <div
                 ref={editableRef}
                 className={cn(
                     "min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap transition-[padding-right] pr-3",
-                    onClose && !isReordering && "group-hover:pr-6",
+                    onClose && !isReordering && "group-hover:pr-14",
                     isEditable && "rounded-[2px] bg-white/15 outline-none"
                 )}
                 contentEditable={isEditable}
@@ -200,8 +239,36 @@ export function VTab({
                 onKeyDown={handleKeyDown}
                 suppressContentEditableWarning={true}
             >
-                {tab.name}
+                {displayName}
             </div>
+            {(agentAlert || agentWaiting) && tab.agentRun != null && (
+                <span
+                    data-testid="agent-dot"
+                    aria-label={agentLine ?? "Agent finished"}
+                    title={agentLine ?? undefined}
+                    className={cn(
+                        "pointer-events-none ml-1 mr-0.5 h-[7px] w-[7px] shrink-0 rounded-full",
+                        agentWaiting && "animate-pulse"
+                    )}
+                    style={{ backgroundColor: agentWaiting ? "#f59e0b" : agentAlertColor(tab.agentRun) }}
+                />
+            )}
+            {onActions && (
+                <button
+                    type="button"
+                    className={cn(
+                        "absolute top-1/2 right-[20px] shrink-0 -translate-y-1/2 cursor-pointer py-1 pl-1 pr-1 text-secondary transition",
+                        isReordering ? "opacity-0" : "opacity-0 group-hover:opacity-100 hover:text-primary"
+                    )}
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        onActions(event);
+                    }}
+                    aria-label="Tab actions"
+                >
+                    <i className="fa fa-solid fa-ellipsis" />
+                </button>
+            )}
             {onClose && (
                 <button
                     type="button"

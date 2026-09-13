@@ -72,6 +72,36 @@
         }
     }
 
+    // Centers [agent logo][tab name] as a group; the logo is only rendered
+    // while a known AI CLI (claude, codex, ...) runs in the tab's terminal.
+    .name-group {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate3d(-50%, -50%, 0);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        max-width: calc(100% - 10px);
+        z-index: var(--zindex-tab-name);
+
+        .tab-cli-logo {
+            flex-shrink: 0;
+            width: 14px;
+            height: 14px;
+            pointer-events: none;
+        }
+
+        .name {
+            position: static;
+            transform: none;
+            width: auto;
+            max-width: 100%;
+            min-width: 0;
+        }
+    }
+
     .wave-button {
         position: absolute;
         top: 50%;

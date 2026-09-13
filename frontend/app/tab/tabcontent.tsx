@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { Block } from "@/app/block/block";
+import { CanvasLayout } from "@/app/canvas/canvas-layout";
 import { CenteredDiv } from "@/element/quickelems";
 import { ContentRenderer, NodeModel, PreviewRenderer, TileLayout } from "@/layout/index";
 import { TileLayoutContents } from "@/layout/lib/types";
-import { atoms, getApi } from "@/store/global";
+import { atoms, getApi, getSettingsKeyAtom } from "@/store/global";
 import * as services from "@/store/services";
 import * as WOS from "@/store/wos";
 import { atom, useAtomValue } from "jotai";
@@ -24,6 +25,7 @@ const TabContent = React.memo(({ tabId, noTopPadding }: { tabId: string; noTopPa
     const tabAtom = useMemo(() => WOS.getWaveObjectAtom<Tab>(oref), [oref]);
     const tabData = useAtomValue(tabAtom);
     const tileGapSize = useAtomValue(tileGapSizeAtom);
+    const canvasMode = useAtomValue(getSettingsKeyAtom("app:canvasmode")) ?? false;
 
     const tileLayoutContents = useMemo(() => {
         const renderContent: ContentRenderer = (nodeModel: NodeModel) => {
@@ -53,6 +55,8 @@ const TabContent = React.memo(({ tabId, noTopPadding }: { tabId: string; noTopPa
         innerContent = <CenteredDiv>Tab Loading</CenteredDiv>;
     } else if (!tabData) {
         innerContent = <CenteredDiv>Tab Not Found</CenteredDiv>;
+    } else if (canvasMode) {
+        innerContent = <CanvasLayout key={tabId} tabAtom={tabAtom} tabId={tabId} />;
     } else if (tabData?.blockids?.length == 0) {
         innerContent = null;
     } else {

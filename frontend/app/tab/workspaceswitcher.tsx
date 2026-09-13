@@ -1,6 +1,7 @@
 // Copyright 2026, Command Line Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+import { globalStore } from "@/app/store/jotaiStore";
 import { useWaveEnv, WaveEnv, WaveEnvSubset } from "@/app/waveenv/waveenv";
 import {
     ExpandableMenu,
@@ -19,7 +20,6 @@ import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
 import { CSSProperties, forwardRef, useCallback, useEffect } from "react";
 import WorkspaceSVG from "../asset/workspace.svg";
 import { IconButton } from "../element/iconbutton";
-import { globalStore } from "@/app/store/jotaiStore";
 import { makeORef } from "../store/wos";
 import { waveEventSubscribeSingle } from "../store/wps";
 import { WorkspaceEditor } from "./workspaceeditor";
@@ -44,6 +44,9 @@ type WorkspaceListEntry = {
     windowId: string;
     workspace: Workspace;
 };
+
+// The app brand mark is not tinted with the workspace color.
+const isBrandLogoIcon = (icon: string) => icon === "custom@wave-logo-solid";
 
 type WorkspaceList = WorkspaceListEntry[];
 const workspaceMapAtom = atom<WorkspaceList>([]);
@@ -93,7 +96,10 @@ const WorkspaceSwitcher = forwardRef<HTMLDivElement>((_, ref) => {
     const isActiveWorkspaceSaved = !!(activeWorkspace.name && activeWorkspace.icon);
 
     const workspaceIcon = isActiveWorkspaceSaved ? (
-        <i className={makeIconClass(activeWorkspace.icon, false)} style={{ color: activeWorkspace.color }}></i>
+        <i
+            className={makeIconClass(activeWorkspace.icon, false)}
+            style={isBrandLogoIcon(activeWorkspace.icon) ? undefined : { color: activeWorkspace.color }}
+        ></i>
     ) : (
         <WorkspaceSVG />
     );
@@ -233,7 +239,7 @@ const WorkspaceSwitcherItem = ({
                     <ExpandableMenuItemLeftElement>
                         <i
                             className={clsx("left-icon", makeIconClass(workspace.icon, true))}
-                            style={{ color: workspace.color }}
+                            style={isBrandLogoIcon(workspace.icon) ? undefined : { color: workspace.color }}
                         />
                     </ExpandableMenuItemLeftElement>
                     <div className="label">{workspace.name}</div>
